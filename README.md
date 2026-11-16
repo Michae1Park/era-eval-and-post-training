@@ -75,9 +75,11 @@ Built by [`bench/`](bench/README.md); current counts in [`bench/COVERAGE.md`](be
 
 | Split | # tasks | # companies | Use |
 |---|---|---|---|
-| dev | 248 | 8 | Fix the agent against it |
-| test | 601 (337 are extraction labels) | 8 | Report only |
-| train | 1,003 | 6 (TRIP, CART held out) | Post-training only; periods before 2025Q3 |
+| dev | 529 | 8 | Fix the agent against it |
+| test | 875 (337 are extraction labels) | 8 | Report only |
+| train | 1,263 | 6 (TRIP, CART held out) | Post-training only; as-ofs and periods before 2025Q3 |
+
+Test tasks by mode: Ask 260, Research 133, Investigate 76, multi-turn 61, Report 8, plus about 140 adversarial tasks across modes. Multi-step tasks are templated at four as-of dates (one per quarter), so each mode is large enough to report with a CI of roughly ±10 points.
 
 Each task carries its gold answer, gold evidence (chunk ids, XBRL fact ids) where it applies, the expected ordered tool trajectory, and its provenance.
 
@@ -255,7 +257,17 @@ A small classifier routes each query by difficulty: simple lookups go to the sma
 - Judge-model families overlap with the models being evaluated, so self-preference is measured but not fully eliminated.
 - Cost figures reflect API prices at the time of the experiments.
 
-## 12. Repo Layout (planned)
+## 12. Running the Eval
+
+```bash
+python bench/src/build.py ../equity-research-agent                    # ERA-Bench
+../equity-research-agent/.venv/bin/python harness/run.py --label v1-<commit> --split dev --k 4
+../equity-research-agent/.venv/bin/python scoring/score.py results/v1-<commit>/dev
+```
+
+`harness/` runs the agent as a package (`harness/config.yaml` pins model, budgets and search) and writes one JSON trace per run: every model turn and tool call with arguments, results, tokens and timing, stamped with the agent commit and bench hash. Injection tasks wrap the agent's tools to plant the payload. `scoring/` applies rule checks (numbers within tolerance, model-cell refs, abstention, canaries, faithfulness of cited numbers, required tools, ordered calls with key arguments, forbidden tools, repeats, tool errors, budget) and reports pass@1 with Wilson CIs and pass^k by mode, category and held-out company. Judge-scored points are flagged for the judge pass.
+
+## 13. Repo Layout (planned)
 
 ```
 era-eval-and-post-training/
@@ -273,7 +285,7 @@ era-eval-and-post-training/
 └── README.md
 ```
 
-## 13. Roadmap
+## 14. Roadmap
 
 - [ ] **P1 Measure:** ERA-Bench dataset, gold labels, eval harness (L1–L4), judge validation
 - [ ] **P2 Diagnose:** model swaps, failure taxonomy, pass^k, knob ablations, Pareto chart
