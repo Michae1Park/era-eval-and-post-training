@@ -1,5 +1,6 @@
 import argparse
 import html
+import re
 import json
 import subprocess
 import tempfile
@@ -158,6 +159,35 @@ def extraction_table(tasks: list[dict]) -> str:
     return "<table>" + "".join(rows) + "</table>"
 
 
+def inline_md(text: str) -> str:
+    text = esc(text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+    return re.sub(r"`(.+?)`", r"<code>\1</code>", text)
+
+
+def markdown_tables(md: str) -> str:
+    out, table = [], []
+
+    def flush():
+        if table:
+            header, *body = [[c.strip() for c in line.strip().strip("|").split("|")] for line in table if not set(line) <= set("|-: ")]
+            out.append("<table><tr>" + "".join(f"<th>{inline_md(c)}</th>" for c in header) + "</tr>"
+                       + "".join("<tr>" + "".join(f"<td>{inline_md(c)}</td>" for c in r) + "</tr>" for r in body) + "</table>")
+            table.clear()
+
+    for line in md.splitlines():
+        if line.startswith("|"):
+            table.append(line)
+            continue
+        flush()
+        if line.startswith("## "):
+            out.append(f"<h3>{inline_md(line[3:])}</h3>")
+        elif line.strip() and not line.startswith("# "):
+            out.append(f"<p class='meta'>{inline_md(line)}</p>")
+    flush()
+    return "".join(out)
+
+
 def render_html(tasks: list[dict], manifest: dict, coverage_md: str) -> str:
     evals = [t for t in tasks if t["split"] in ("dev", "test")]
     train = [t for t in tasks if t["split"] == "train"]
@@ -177,7 +207,7 @@ def render_html(tasks: list[dict], manifest: dict, coverage_md: str) -> str:
             n = sum(len(v) for v in by_mode[mode].values())
             parts.append(f"<li>{esc(MODE_TITLES[mode])}: {n} tasks</li>")
     parts.append(f"<li>Train split: {len(train)} tasks ({TRAIN_SAMPLE} sampled here)</li></ul>")
-    parts.append("<h3>Coverage</h3><pre class='mono' style='white-space:pre-wrap'>" + esc(coverage_md.split("## Categories")[0]) + "</pre>")
+    parts.append("<h3>Coverage</h3>" + markdown_tables(coverage_md.split("## Categories")[0]))
 
     for mode in MODE_ORDER:
         if mode not in by_mode:
