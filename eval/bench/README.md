@@ -3,7 +3,7 @@
 One consolidated benchmark for the equity-research-agent's V4 scope: eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), every task read as of a date. The FY2025 Big Tech sets stay in the agent repo as legacy and are not imported.
 
 ```bash
-python bench/src/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, COVERAGE.md
+python eval/bench/src/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, COVERAGE.md
 python bench/src/render.py                           # review/era-bench-review.pdf
 ```
 

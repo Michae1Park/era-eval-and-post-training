@@ -9,8 +9,8 @@ import numpy as np
 from scipy.stats import bootstrap
 from statsmodels.stats.proportion import proportion_confint
 
-ROOT = Path(__file__).resolve().parent.parent
-TASKS = ROOT / "bench" / "tasks"
+ROOT = Path(__file__).resolve().parents[2]
+TASKS = ROOT / "eval" / "bench" / "tasks"
 NOT_SCORED = ("harness_error", "infra_error")
 
 

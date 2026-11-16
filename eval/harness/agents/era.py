@@ -10,7 +10,7 @@ from agents.base import RunContext
 from inject import wrap as wrap_injection
 from runtime import guarded
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def _cut(value, limit: int):

@@ -17,8 +17,8 @@ from agents import AGENTS  # noqa: E402
 from agents.base import TRACE_SCHEMA, RunContext  # noqa: E402
 from runtime import AGENT_STATUSES, TaskCancelled, cancel_all, execute  # noqa: E402
 
-ROOT = HERE.parent
-TASKS = ROOT / "bench" / "tasks"
+ROOT = HERE.parent.parent
+TASKS = HERE.parent / "bench" / "tasks"
 RESULTS = ROOT / "results"
 REGISTRY = RESULTS / "runs.jsonl"
 
@@ -71,7 +71,7 @@ def main() -> None:
     agent = AGENTS[config["agent_under_test"]]()
     agent.configure(config)
     version = agent.version()
-    manifest = json.loads((ROOT / "bench" / "manifest.json").read_text())
+    manifest = json.loads((HERE.parent / "bench" / "manifest.json").read_text())
     out = RESULTS / args.label / args.split
     out.mkdir(parents=True, exist_ok=True)
     traces = out / "traces.jsonl"

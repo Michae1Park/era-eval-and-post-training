@@ -219,7 +219,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 __pycache__/
-bench/review/*.pdf
+eval/bench/review/*.pdf
 results/**/traces.jsonl
 results/**/reports/
 results/smoke/
