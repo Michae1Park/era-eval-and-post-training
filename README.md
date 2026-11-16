@@ -8,16 +8,27 @@ Systematically evaluate, diagnose, and improve AI systems through component-leve
 
 ## TL;DR
 
-We build **ERA-Bench**, a benchmark for the [equity-research-agent](https://github.com/Michae1Park/equity-research-agent) (ERA), a tool-using RAG agent that answers questions about public companies. Then we use it to answer one question:
+**Eval-driven post-training** for the [equity-research-agent](https://github.com/Michae1Park/equity-research-agent) (ERA), a tool-using RAG agent that answers questions about public companies.
 
-> **How small a model can run a reliable financial research agent, and what does it take to get there?**
+> **Evaluation tells you what's broken. Post-training fixes it. Evaluation proves the fix worked.**
+
+```
+ Act 1: MEASURE ──► Act 2: DIAGNOSE ──► Act 3: FIX ──► Act 4: VERIFY
+ ERA-Bench +        failure taxonomy    SFT / DPO /     targeted failure
+ validated judges   + root-cause        GRPO, each      rates drop, held-out
+                    attribution         aimed at a      tests check for
+                                        diagnosed       overfitting and
+                                        failure         reward gaming
+        ▲                                                    │
+        └──────────── same eval harness throughout ──────────┘
+```
 
 | Headline result (placeholder) | |
 |---|---|
-| Frontier model, end-to-end quality | `x.xx` |
-| Small model (8B), baseline | `x.xx` |
-| Small model + SFT + DPO + GRPO | `x.xx` (**`xx%` of frontier quality at `x%` of the cost**) |
 | Judge panel agreement with human labels (Cohen's κ) | `x.xx` |
+| Top small-model failure modes diagnosed | `T4` bad args (`xx%`), `T5` hallucination after empty tool result (`xx%`) |
+| Small model (8B), baseline → post-trained | `x.xx` → `x.xx` (**`xx%` of frontier quality at `x%` of the cost**) |
+| Targeted failure rates after post-training | `T4` `xx%` → `x%`, `T5` `xx%` → `x%` |
 
 ---
 
@@ -30,19 +41,20 @@ Agent demos look good. Agent *evaluation* rarely holds up to scrutiny:
 3. **Averages hide unreliability.** An agent that is right 80% of the time but rarely right on *every* attempt cannot be deployed.
 4. **Finance is unforgiving.** A single fabricated number makes a report worthless.
 
-This repo treats the ERA as the system under test and evaluates it **layer by layer**, **validates its own judges**, measures **reliability** as well as accuracy, and then uses the eval signals as **training signal** for small models.
+This repo treats the ERA as the system under test and evaluates it **layer by layer**, **validates its own judges**, and measures **reliability** as well as accuracy. Then it closes the loop: the diagnosed failures decide **what to post-train**, the eval checks become the **training signal**, and the same harness **verifies** the fix.
 
 ## 2. Research Questions
 
-| # | Question | Section |
-|---|---|---|
-| **RQ1** | Where does the agent fail: retrieval, tool use, or generation? | §5 |
-| **RQ2** | Can an LLM-judge panel be trusted for financial research output? | §4 |
-| **RQ3** | How reliable is the agent across repeated runs (pass^k)? | §5.4 |
-| **RQ4** | Which knobs (retrieval K, chunking, temperature, step budget) matter most? | §6 |
-| **RQ5** | What is the quality vs. cost/latency Pareto frontier across models? | §7 |
-| **RQ6** | How much of the gap between small and frontier models can post-training close, and which technique helps most? | §8 |
-| **RQ7** *(stretch)* | Can a router plus small models match a single large model? | §9 |
+| Act | # | Question | Section |
+|---|---|---|---|
+| Measure | **RQ1** | Can an LLM-judge panel be trusted for financial research output? | §4 |
+| Diagnose | **RQ2** | Where does the agent fail (retrieval, tool use, or generation), and how do failures differ by model size? | §5 |
+| Diagnose | **RQ3** | How reliable is the agent across repeated runs (pass^k)? | §5.4 |
+| Diagnose | **RQ4** | Which knobs (retrieval K, chunking, temperature, step budget) matter most? | §6 |
+| Diagnose | **RQ5** | What is the quality vs. cost/latency Pareto frontier across models? | §7 |
+| Fix | **RQ6** | Can post-training aimed at diagnosed failures close the small-to-frontier gap, and which technique fixes which failure? | §8 |
+| Verify | **RQ7** | Do the gains hold on held-out data without reward gaming or regressions? | §9 |
+| Stretch | **RQ8** | Can a router plus small models match a single large model? | §10 |
 
 ## 3. ERA-Bench: The Benchmark
 
@@ -67,7 +79,7 @@ This repo treats the ERA as the system under test and evaluates it **layer by la
 
 Each task includes the question, the gold answer and/or key points, **gold evidence chunks** (for retrieval metrics), and the **expected tool trajectory** (for trajectory metrics).
 
-## 4. Evaluation Methodology
+## 4. Act 1: Measurement Methodology
 
 ### 4.1 Layered Evaluation
 
@@ -96,7 +108,7 @@ Each layer is evaluated **in isolation** (e.g. L2 is given gold context) and **i
 | Finance-specific safety | Medium | Rule + judge: no fabricated price targets, no personalized advice, abstains when appropriate, resists prompt injection |
 | Tone / style | Low | Single judge rubric item |
 
-### 4.3 Judge Panel and Validation (RQ2)
+### 4.3 Judge Panel and Validation (RQ1)
 
 - **Panel:** 3 judges from different model families. Final score is the majority vote or mean.
 - **Human anchor:** `~150` outputs hand-labeled by the author.
@@ -112,7 +124,9 @@ Each layer is evaluated **in isolation** (e.g. L2 is given gold context) and **i
 
 **Takeaway (expected):** which dimensions can safely be judged by an LLM, and which need rules or humans.
 
-## 5. Diagnosing the Agent (RQ1, RQ3)
+## 5. Act 2: Diagnosing the Agent (RQ2, RQ3)
+
+The output of this act is a **ranked list of failure modes for the small model**, which becomes the target list for Act 3.
 
 ### 5.1 Retrieval (L1)
 
@@ -177,29 +191,52 @@ For each failed task, we attribute the failure to its root layer: **retrieval mi
 
 **Headline figure:** Pareto frontier (quality vs. cost per task), with the post-trained small model as the point that moves.
 
-## 8. Post-Training Small Models (RQ6)
+## 8. Act 3: Fixing It with Post-Training (RQ6)
 
-The eval harness doubles as the training signal:
+### 8.1 From Diagnosis to Technique
 
-```
-ERA-Bench evals ──► filter good trajectories ──► SFT data
-                ──► judge-ranked pairs        ──► DPO data
-                ──► rule-based checks         ──► GRPO rewards
-```
+Each technique is chosen for the failure it is best suited to fix, and its training data comes from the eval harness:
 
-| Stage | Data source | Quality | Tool-error rate | pass^5 | % of frontier |
-|---|---|---|---|---|---|
-| Baseline (8B) | — | `x.xx` | `xx%` | `x.xx` | `xx%` |
-| + SFT | Distilled frontier trajectories that pass the evals | `x.xx` | `xx%` | `x.xx` | `xx%` |
-| + DPO | Judge-ranked preference pairs | `x.xx` | `xx%` | `x.xx` | `xx%` |
-| + GRPO | Verifiable rewards (valid tool calls, numeric accuracy) | `x.xx` | `xx%` | `x.xx` | `xx%` |
+| Diagnosed failure (§5) | Technique | Why this technique | Training signal from evals |
+|---|---|---|---|
+| `T1`–`T4` tool-call format, wrong tool, bad args | **SFT** | Imitation fixes behavior that follows a learnable pattern | Frontier trajectories that pass all L3 rule checks |
+| `T5`–`T6` hallucination, ignoring tool output | **DPO** | Needs a contrast between faithful and unfaithful answers | Judge-ranked pairs: grounded answer vs. unsupported one |
+| Numeric errors, `T7`–`T8` inefficient trajectories | **GRPO** | Correctness can be checked exactly, so reward it directly | Rule-based rewards: number matches gold, valid calls, step penalty |
 
-**Additional analyses:**
-- Which failure codes (§5.2) each stage fixes
-- Overfitting check: held-out companies and held-out task types
-- Reward hacking check: rule-based reward goes up, judge score doesn't
+### 8.2 Setup
 
-## 9. Stretch: Router + Small Models (RQ7)
+Single L40S (48 GB).
+
+| Technique | Model | Method |
+|---|---|---|
+| SFT, DPO | 7–8B | LoRA |
+| GRPO | 3–4B (7–8B if it scales) | LoRA, vLLM rollouts on the same GPU |
+
+### 8.3 Results
+
+| Stage | Quality | `T1–T4` rate | `T5–T6` rate | Numeric acc. | pass^5 | % of frontier |
+|---|---|---|---|---|---|---|
+| Baseline | `x.xx` | `xx%` | `xx%` | `xx%` | `x.xx` | `xx%` |
+| + SFT | `x.xx` | **`x%`** | `xx%` | `xx%` | `x.xx` | `xx%` |
+| + DPO | `x.xx` | `x%` | **`x%`** | `xx%` | `x.xx` | `xx%` |
+| + GRPO | `x.xx` | `x%` | `x%` | **`xx%`** | `x.xx` | `xx%` |
+
+**Expected figure:** failure-code heatmap before vs. after each stage, showing that each technique moves its target column.
+
+## 9. Act 4: Verifying the Fix (RQ7)
+
+The same harness checks that the gains are real:
+
+| Check | Method | Result |
+|---|---|---|
+| Generalization | Held-out companies and held-out task types | `x.xx` vs. `x.xx` in-distribution |
+| Reward gaming | GRPO rule reward rises but judge score doesn't | `x.xx` correlation |
+| Regressions | Untargeted dimensions (safety, abstention, tone) don't drop | `±x.xx` |
+| Judge circularity | DPO-trained model scored by a judge outside the training panel | `x.xx` vs. `x.xx` |
+| Reliability | pass^k curve of post-trained vs. baseline | `x.xx` → `x.xx` |
+| Cost position | Post-trained model's new point on the §7 Pareto chart | `$x.xx`, `x.xx` quality |
+
+## 10. Stretch: Router + Small Models (RQ8)
 
 A small classifier routes each query by difficulty: simple lookups go to the small model, and complex synthesis goes to the frontier model.
 
@@ -209,14 +246,14 @@ A small classifier routes each query by difficulty: simple lookups go to the sma
 | Small only | `x.xx` | `$x.xx` | `x.xs` |
 | Router | `x.xx` | `$x.xx` | `x.xs` |
 
-## 10. Limitations
+## 11. Limitations
 
 - Human labels come from a single annotator.
 - Coverage is limited to US public companies and SEC filings.
 - Judge-model families overlap with the models being evaluated, so self-preference is measured but not fully eliminated.
 - Cost figures reflect API prices at the time of the experiments.
 
-## 11. Repo Layout (planned)
+## 12. Repo Layout (planned)
 
 ```
 era-eval-and-post-training/
@@ -234,10 +271,10 @@ era-eval-and-post-training/
 └── README.md
 ```
 
-## 12. Roadmap
+## 13. Roadmap
 
-- [ ] **P1** ERA-Bench dataset and gold labels
-- [ ] **P2** Eval harness (L1–L4) and judge validation
-- [ ] **P3** Baselines: model swaps, knob ablations, Pareto chart
-- [ ] **P4** Post-training: SFT → DPO → GRPO
-- [ ] **P5** Stretch: router, robustness suite
+- [ ] **P1 Measure:** ERA-Bench dataset, gold labels, eval harness (L1–L4), judge validation
+- [ ] **P2 Diagnose:** model swaps, failure taxonomy, pass^k, knob ablations, Pareto chart
+- [ ] **P3 Fix:** SFT → DPO → GRPO, each aimed at its diagnosed failures
+- [ ] **P4 Verify:** held-out, reward-gaming, regression, and judge-circularity checks
+- [ ] **P5 Stretch:** router, robustness suite
