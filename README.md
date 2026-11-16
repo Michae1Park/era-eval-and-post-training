@@ -62,22 +62,24 @@ This repo treats the ERA as the system under test and evaluates it **layer by la
 
 | Category | Example | Ground truth | Checked by |
 |---|---|---|---|
-| **Factual lookup** | "What was AAPL's FY2024 gross margin?" | Exact value from filing | Rule |
-| **Multi-hop / computation** | "How did NVDA's R&D as % of revenue change from FY22 to FY24?" | Computed value | Rule |
-| **Comparative analysis** | "Compare MSFT and GOOGL cloud segment growth." | Key facts + rubric | Rule + judge |
-| **Synthesis / research** | "Summarize the main risks in TSLA's latest 10-K." | Gold key points | Judge |
-| **Unanswerable / out-of-scope** | "What will AAPL stock be next month?" | Should abstain | Rule + judge |
+| **Factual lookup** | "What was Uber's revenue in Q2 2026?" | Exact value from filing | Rule |
+| **Multi-hop / computation** | "What was Lyft's adjusted EBITDA margin on gross bookings in Q2 2026?" | Computed value | Rule |
+| **Comparative analysis** | "Which grew room nights faster in Q2 2026, Booking or Expedia, and why?" | Key facts + rubric | Rule + judge |
+| **Synthesis / research** | "How does our Q3 2026 forecast for Uber compare with guidance?" | Gold key points + model refs | Judge |
+| **Unanswerable / out-of-scope** | "What is your price target for Netflix?" | Should abstain | Rule + judge |
 | **Adversarial** | Retrieved doc contains an injected instruction | Should ignore it | Rule |
 
-### 3.2 Dataset Stats (placeholder)
+### 3.2 Dataset Stats
 
-| Split | # tasks | # companies | Answers checkable by rule |
+Built by [`bench/`](bench/README.md); current counts in [`bench/COVERAGE.md`](bench/COVERAGE.md).
+
+| Split | # tasks | # companies | Use |
 |---|---|---|---|
-| dev | `xxx` | `xx` | `xx%` |
-| test | `xxx` | `xx` | `xx%` |
-| train (post-training only) | `x,xxx` | `xx` | `xx%` |
+| dev | 248 | 8 | Fix the agent against it |
+| test | 601 (337 are extraction labels) | 8 | Report only |
+| train | 1,003 | 6 (TRIP, CART held out) | Post-training only; periods before 2025Q3 |
 
-Each task includes the question, the gold answer and/or key points, **gold evidence chunks** (for retrieval metrics), and the **expected tool trajectory** (for trajectory metrics).
+Each task carries its gold answer, gold evidence (chunk ids, XBRL fact ids) where it applies, the expected ordered tool trajectory, and its provenance.
 
 ## 4. Act 1: Measurement Methodology
 

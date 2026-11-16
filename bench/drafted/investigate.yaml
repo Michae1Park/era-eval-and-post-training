@@ -1,0 +1,370 @@
+defaults:
+  mode: investigate
+  as_of: "2026-09-01"
+  layers: [e2e, trajectory]
+  answer: {type: composite}
+
+tasks:
+  - id: inv-uber-mobility-vs-delivery-growth
+    category: segment_drivers
+    companies: [UBER]
+    question: Which of Uber's Mobility and Delivery segments grew gross bookings faster from Q1 to Q2 2026, and what does management say drove each?
+    parts:
+      - mode: ask
+        values:
+          - {label: Mobility GB growth q/q, compute: {growth: ["kpi:UBER:gross_bookings:mobility:2026Q2", "kpi:UBER:gross_bookings:mobility:2026Q1"]}, unit: percent}
+          - {label: Delivery GB growth q/q, compute: {growth: ["kpi:UBER:gross_bookings:delivery:2026Q2", "kpi:UBER:gross_bookings:delivery:2026Q1"]}, unit: percent}
+    required_points:
+      - Names the faster-growing segment with both growth rates
+      - Gives management's stated drivers for each segment, cited to the Q2 2026 release
+    expected_gaps: [Quarter-over-quarter growth is affected by seasonality]
+    expected_tools: [company_kpis, search_filings, calculator]
+
+  - id: inv-expe-b2b-b2c-gap
+    category: segment_drivers
+    companies: [EXPE]
+    question: How much faster did Expedia's B2B revenue grow than B2C from Q2 2025 to Q2 2026, and what explains the gap?
+    parts:
+      - mode: ask
+        values:
+          - {label: B2B revenue Q2 2026, ref: "kpi:EXPE:revenue:b2b:2026Q2"}
+          - {label: B2C revenue Q2 2026, ref: "kpi:EXPE:revenue:b2c:2026Q2"}
+    required_points:
+      - States B2B and B2C revenue growth year over year
+      - Explains the gap with management's stated reasons, cited
+    expected_gaps: [Year-ago segment figures must come from the Q2 2026 release's comparative column]
+    expected_tools: [company_kpis, search_filings, calculator]
+
+  - id: inv-dash-deliveroo-contribution
+    category: what_changed
+    companies: [DASH]
+    question: How much of DoorDash's Q2 2026 order and revenue growth came from the Deliveroo acquisition, and does our model's Q3 2026 revenue reflect it?
+    parts:
+      - mode: ask
+        values:
+          - {label: Total orders growth incl. Deliveroo, value: 27, unit: percent}
+          - {label: Total orders growth excl. Deliveroo, value: 17, unit: percent}
+          - {label: Revenue growth incl. Deliveroo, value: 36, unit: percent}
+          - {label: Revenue growth excl. Deliveroo, value: 24, unit: percent}
+        chunk_ids: [DASH-2026Q2-ER-EX99-004-c00]
+      - mode: research
+        expected_refs: ["model:DASH:2026\\-09\\-01:base:revenue\\.2026Q3"]
+    required_points:
+      - Separates organic growth from the acquisition's contribution for orders and revenue
+      - States the model's Q3 2026 revenue and whether its growth assumption includes Deliveroo
+    expected_tools: [search_filings, company_kpis, model_view]
+
+  - id: inv-lyft-freenow-international
+    category: what_changed
+    companies: [LYFT]
+    question: What changed in Lyft's geographic footprint in 2025, and how is it showing up in gross bookings growth in 2026?
+    parts:
+      - mode: ask
+        values:
+          - {label: Gross bookings growth Q2 2026 y/y, value: 23, unit: percent}
+        chunk_ids: [LYFT-FY2025-1-000-c01, LYFT-2026Q2-ER-EX99-002-c00]
+    required_points:
+      - Names the Freenow (July 2025) and TBR (October 2025) acquisitions
+      - Links them to faster gross bookings growth, noting that part of the growth is acquired
+    expected_gaps: [Organic vs acquired growth split may not be disclosed]
+    expected_tools: [search_filings, company_kpis]
+
+  - id: inv-bkng-expe-room-nights
+    category: peer_reasons
+    companies: [BKNG, EXPE]
+    question: Which grew room nights faster year over year in Q2 2026, Booking or Expedia, and what do their releases say drove it?
+    parts:
+      - mode: ask
+        values:
+          - {label: BKNG room nights Q2 2026, ref: "kpi:BKNG:room_nights:2026Q2"}
+          - {label: EXPE room nights Q2 2026, ref: "kpi:EXPE:room_nights:2026Q2"}
+    required_points:
+      - Gives both companies' room-night growth rates and names the faster one
+      - Cites each management's stated drivers
+    expected_gaps: [Booking and Expedia define room nights differently (Expedia counts booked; check definitions)]
+    expected_tools: [company_kpis, search_filings]
+
+  - id: inv-cart-dash-grocery
+    category: peer_reasons
+    companies: [CART, DASH]
+    question: Compare Instacart's GTV growth with DoorDash's commentary on its grocery category in Q2 2026. Is Instacart losing share?
+    parts:
+      - mode: ask
+        values:
+          - {label: CART GTV Q2 2026, ref: "kpi:CART:gtv:2026Q2"}
+          - {label: CART GTV growth y/y, value: 14, unit: percent}
+        chunk_ids: [CART-2026Q2-ER-EX99-002-c00, DASH-2026Q2-ER-EX99-004-c00]
+    required_points:
+      - Gives Instacart's GTV growth
+      - Reports that DoorDash describes strong grocery growth without a separate grocery GOV figure
+      - Concludes that share shift cannot be measured from filings alone
+    expected_gaps: [DoorDash does not disclose grocery GOV separately]
+    expected_tools: [company_kpis, search_filings]
+
+  - id: inv-abnb-new-categories
+    category: strategy
+    companies: [ABNB]
+    question: What new categories is Airbnb expanding into in 2026, and is there any evidence yet that they contribute to growth?
+    parts:
+      - mode: ask
+        values:
+          - {label: Gross booking value Q2 2026, ref: "kpi:ABNB:gross_booking_value:2026Q2"}
+        chunk_ids: [ABNB-2026Q1-ER-EX99-001-c03, ABNB-2026Q1-ER-EX99-002-c00]
+    required_points:
+      - Names services, experiences and boutique/independent hotels
+      - Reports management's early evidence (e.g. new guests who book an experience, hotel guests who return to book a home)
+      - Notes that no revenue split for the new categories is disclosed
+    expected_tools: [search_filings, company_kpis]
+
+  - id: inv-trip-segment-mix
+    category: segment_drivers
+    companies: [TRIP]
+    question: Which Tripadvisor segment is growing fastest in 2026, and how much of total revenue does it now represent?
+    parts:
+      - mode: ask
+        values:
+          - {label: Experiences revenue Q2 2026, value: 278.6, unit: USD millions}
+          - {label: Total revenue Q2 2026, ref: "kpi:TRIP:revenue:total:2026Q2"}
+          - {label: Experiences share of revenue, compute: {ratio_of_value: [278.6, "kpi:TRIP:revenue:total:2026Q2"]}, unit: percent}
+        chunk_ids: [TRIP-2026Q2-ER-EX99-007-c00]
+    required_points:
+      - Compares segment growth rates and names the fastest
+      - Computes the segment's share of total revenue
+    expected_tools: [company_kpis, search_filings, calculator]
+
+  - id: inv-uber-guide-vs-model-q3
+    category: reported_vs_model
+    companies: [UBER]
+    question: How does our Q3 2026 gross bookings forecast for Uber compare with the company's guidance range, and why might it differ?
+    parts:
+      - mode: ask
+        values:
+          - {label: Guidance low, ref: "guide:UBER:gross_bookings:low:2026Q3"}
+          - {label: Guidance high, ref: "guide:UBER:gross_bookings:high:2026Q3"}
+      - mode: research
+        expected_refs: ["model:UBER:2026\\-09\\-01:base:gross_bookings\\.2026Q3"]
+    required_points:
+      - States the guidance range and the model forecast
+      - Says whether the forecast is inside, above or below the range
+      - Explains the difference from the model's assumptions (e.g. guidance anchoring)
+    requires_assumptions: true
+    expected_tools: [guidance, model_view]
+
+  - id: inv-lyft-guide-vs-model-q3
+    category: reported_vs_model
+    companies: [LYFT]
+    question: Is our Q3 2026 adjusted EBITDA forecast for Lyft above or below the guidance midpoint, and what drives that?
+    parts:
+      - mode: ask
+        values:
+          - {label: Guidance low, ref: "guide:LYFT:adj_ebitda:low:2026Q3"}
+          - {label: Guidance high, ref: "guide:LYFT:adj_ebitda:high:2026Q3"}
+      - mode: research
+        expected_refs: ["model:LYFT:2026\\-09\\-01:base:adj_ebitda\\.2026Q3"]
+    required_points:
+      - Gives the guidance midpoint and the forecast
+      - Explains the forecast's position with the model's assumptions
+    requires_assumptions: true
+    expected_tools: [guidance, model_view]
+
+  - id: inv-dash-guide-vs-model-q3
+    category: reported_vs_model
+    companies: [DASH]
+    question: Compare our Q3 2026 marketplace GOV forecast for DoorDash with its guidance. Which assumptions matter most?
+    parts:
+      - mode: ask
+        values:
+          - {label: Guidance low, ref: "guide:DASH:marketplace_gov:low:2026Q3"}
+          - {label: Guidance high, ref: "guide:DASH:marketplace_gov:high:2026Q3"}
+      - mode: research
+        expected_refs: ["model:DASH:2026\\-09\\-01:base:"]
+    required_points:
+      - States the guidance range and the model forecast
+      - Names the drivers the forecast depends on most
+    requires_assumptions: true
+    expected_tools: [guidance, model_view]
+
+  - id: inv-bkng-guide-vs-model-q3
+    category: reported_vs_model
+    companies: [BKNG]
+    question: Where does our Q3 2026 room nights forecast for Booking sit against its guided growth range?
+    parts:
+      - mode: ask
+        values:
+          - {label: Guidance low (growth), ref: "guide:BKNG:room_nights_growth:low:2026Q3"}
+          - {label: Guidance high (growth), ref: "guide:BKNG:room_nights_growth:high:2026Q3"}
+      - mode: research
+        expected_refs: ["model:BKNG:2026\\-09\\-01:base:volume\\.2026Q3"]
+    required_points:
+      - Converts the forecast to year-over-year growth before comparing with the guided growth range
+      - States whether it is inside the range
+    requires_assumptions: true
+    expected_tools: [guidance, model_view, calculator]
+
+  - id: inv-uber-lyft-take-rate-sensitivity
+    category: scenario
+    companies: [UBER, LYFT]
+    question: If Uber's and Lyft's take rates each fell 50 bps, whose 2027 adjusted EBITDA would fall more in percentage terms?
+    parts:
+      - mode: research
+        expected_refs: ["model:UBER:", "model:LYFT:"]
+    required_points:
+      - Runs one scenario per company with a -0.005 take-rate delta
+      - Compares the percentage change in 2027E adjusted EBITDA and names the more sensitive company
+    requires_assumptions: true
+    expected_tools: [run_scenario]
+
+  - id: inv-travel-sector-growth
+    category: sector
+    companies: [ABNB, BKNG, EXPE, TRIP]
+    question: Rank the four travel companies by year-over-year revenue growth in Q2 2026. Which is decelerating versus Q1?
+    parts:
+      - mode: ask
+        values:
+          - {label: ABNB revenue Q2 2026, ref: "kpi:ABNB:revenue:2026Q2"}
+          - {label: BKNG revenue Q2 2026, ref: "kpi:BKNG:revenue:2026Q2"}
+          - {label: EXPE revenue Q2 2026, ref: "kpi:EXPE:revenue:total:2026Q2"}
+          - {label: TRIP revenue Q2 2026, ref: "kpi:TRIP:revenue:total:2026Q2"}
+    required_points:
+      - Ranks all four by Q2 2026 y/y revenue growth
+      - Compares each with Q1 2026 growth and names the decelerating ones
+    expected_tools: [financials, company_kpis, calculator]
+
+  - id: inv-mobility-sector-profitability
+    category: sector
+    companies: [UBER, LYFT]
+    question: How do Uber and Lyft compare on adjusted EBITDA as a share of gross bookings in Q2 2026, and why is the gap so large?
+    parts:
+      - mode: ask
+        values:
+          - {label: UBER adj. EBITDA / GB, compute: {ratio: ["kpi:UBER:adj_ebitda:2026Q2", "kpi:UBER:gross_bookings:total:2026Q2"]}, unit: percent}
+          - {label: LYFT adj. EBITDA / GB, compute: {ratio: ["kpi:LYFT:adj_ebitda:2026Q2", "kpi:LYFT:gross_bookings:2026Q2"]}, unit: percent}
+    required_points:
+      - Computes both margins on gross bookings
+      - Explains the gap (scale, Delivery mix, international footprint), citing filings where possible
+    expected_gaps: [Uber's gross bookings include Delivery and Freight, so the bases differ]
+    expected_tools: [company_kpis, calculator, search_filings]
+
+  - id: inv-delivery-sector
+    category: sector
+    companies: [DASH, CART, UBER]
+    question: Among DoorDash, Instacart and Uber Delivery, whose order-volume growth was fastest in Q2 2026, and is it organic?
+    parts:
+      - mode: ask
+        values:
+          - {label: DASH total orders growth, value: 27, unit: percent}
+          - {label: DASH organic orders growth, value: 17, unit: percent}
+          - {label: CART orders growth, value: 9, unit: percent}
+        chunk_ids: [DASH-2026Q2-ER-EX99-004-c00, CART-2026Q2-ER-EX99-002-c00]
+    required_points:
+      - Compares order growth for all three, noting that Uber reports trips across segments, not Delivery orders
+      - Separates DoorDash's organic growth from Deliveroo
+    expected_gaps: [Uber does not disclose Delivery order counts]
+    expected_tools: [company_kpis, search_filings]
+
+  - id: inv-expe-buyback-vs-fcf
+    category: capital_allocation
+    companies: [EXPE]
+    question: Is Expedia's 2026 share repurchase pace covered by its free cash flow?
+    parts:
+      - mode: ask
+        values:
+          - {label: Q1 2026 repurchases, value: 700, unit: USD millions}
+          - {label: FCF Q1 2026, ref: "kpi:EXPE:free_cash_flow:2026Q1"}
+        chunk_ids: [EXPE-2026Q1-ER-EX99-001-c00]
+    required_points:
+      - Compares repurchases with free cash flow over the same periods
+      - Mentions the new $5 billion authorization
+    expected_gaps: [Q1 free cash flow is seasonally high for online travel agencies]
+    expected_tools: [company_kpis, search_filings, calculator]
+
+  - id: inv-bkng-capital-return
+    category: capital_allocation
+    companies: [BKNG]
+    question: How much capital did Booking return in Q2 2026, and how much buyback authorization remains?
+    parts:
+      - mode: ask
+        values:
+          - {label: Q2 2026 repurchases, value: 3700, unit: USD millions}
+          - {label: Remaining authorization, value: 14500, unit: USD millions}
+          - {label: Quarterly dividend per share, value: 0.42, unit: USD}
+        chunk_ids: [BKNG-2026Q2-ER-EX99-000-c03]
+    required_points:
+      - Gives repurchases, the dividend and the remaining authorization
+    expected_tools: [search_filings]
+
+  - id: inv-uber-av-risk-and-model
+    category: risk_vs_model
+    companies: [UBER]
+    question: How does Uber describe the risk from autonomous vehicles, and does our model's long-term take rate assume any AV impact?
+    parts:
+      - mode: ask
+        chunk_ids: [UBER-FY2025-1A-001-c01, UBER-FY2025-1-009-c01]
+      - mode: research
+        expected_refs: ["model:UBER:2026\\-09\\-01:base:"]
+    required_points:
+      - Summarizes the 10-K's AV risk factor and names the AV competitors (Waymo, Zoox, Tesla)
+      - States that the model has no explicit AV driver, if so, rather than inventing one
+    requires_assumptions: true
+    expected_tools: [search_filings, model_view]
+
+  - id: inv-abnb-regulation-exposure
+    category: risk_vs_model
+    companies: [ABNB]
+    question: What does Airbnb say about short-term rental regulation, and how would a 5% lower nights growth change our 2027 revenue?
+    parts:
+      - mode: ask
+        chunk_ids: [ABNB-FY2025-1-008-c00]
+      - mode: research
+        expected_refs: ["model:ABNB:"]
+    required_points:
+      - Cites the New York City de facto ban as the example the 10-K gives
+      - Runs a scenario with lower nights growth and reports the 2027E revenue change
+    requires_assumptions: true
+    expected_tools: [search_filings, run_scenario]
+
+  - id: inv-cart-ads-growth
+    category: segment_drivers
+    companies: [CART]
+    question: Is Instacart's advertising revenue growing faster than transaction revenue, and what is management doing to grow it?
+    parts:
+      - mode: ask
+        values:
+          - {label: Advertising and other revenue Q2 2026, value: 297, unit: USD millions}
+          - {label: Advertising growth y/y, value: 16, unit: percent}
+          - {label: Transaction revenue Q2 2026, value: 746, unit: USD millions}
+          - {label: Transaction growth y/y, value: 13, unit: percent}
+        chunk_ids: [CART-2026Q2-ER-EX99-002-c00, CART-2026Q1-ER-EX99-004-c01]
+    required_points:
+      - Compares the two growth rates
+      - Names initiatives such as Carrot Ads partners and self-service Ads Manager
+    expected_tools: [search_filings]
+
+  - id: inv-lyft-margin-trend-and-guide
+    category: what_changed
+    companies: [LYFT]
+    question: How has Lyft's adjusted EBITDA margin on gross bookings moved over the last four quarters, and what does Q3 guidance imply?
+    parts:
+      - mode: ask
+        values:
+          - {label: Margin Q3 2025, compute: {ratio: ["kpi:LYFT:adj_ebitda:2025Q3", "kpi:LYFT:gross_bookings:2025Q3"]}, unit: percent}
+          - {label: Margin Q4 2025, compute: {ratio: ["kpi:LYFT:adj_ebitda:2025Q4", "kpi:LYFT:gross_bookings:2025Q4"]}, unit: percent}
+          - {label: Margin Q1 2026, compute: {ratio: ["kpi:LYFT:adj_ebitda:2026Q1", "kpi:LYFT:gross_bookings:2026Q1"]}, unit: percent}
+          - {label: Margin Q2 2026, compute: {ratio: ["kpi:LYFT:adj_ebitda:2026Q2", "kpi:LYFT:gross_bookings:2026Q2"]}, unit: percent}
+    required_points:
+      - Gives the margin for each of the four quarters
+      - Derives the margin implied by Q3 2026 guidance, or says which guided figures are missing
+    expected_tools: [company_kpis, guidance, calculator]
+
+  - id: inv-uber-variance-q2
+    category: variance
+    companies: [UBER]
+    question: Where did Uber's Q2 2026 results land against what our model expected before the release, and which line missed most?
+    as_of: "2026-08-10"
+    parts:
+      - mode: research
+        expected_refs: ["var-"]
+    required_points:
+      - Uses the variance review for Q2 2026
+      - Names the line with the largest percentage miss and the likely cause
+    expected_tools: [variance_review]

@@ -1,0 +1,32 @@
+defaults:
+  mode: report
+  layers: [e2e, report]
+  category: earnings_note
+  answer: {type: report}
+  report:
+    sections: 10
+    checks:
+      - every figure traces to the evidence log
+      - every model cell in the workbook is a live formula that matches Python's value
+      - every seeded error is caught by the claim check
+      - rubric (judge) >= 4/5 on accuracy, insight, clarity, balance, actionability
+      - rating and price target are labelled as a draft for senior review
+      - no personalized investment advice
+
+tasks:
+  - {id: rpt-uber-2026q1, companies: [UBER], as_of: "2026-05-08", required_values: ["kpi:UBER:gross_bookings:total:2026Q1", "kpi:UBER:revenue:2026Q1", "kpi:UBER:adj_ebitda:2026Q1"]}
+  - {id: rpt-uber-2026q2, companies: [UBER], as_of: "2026-08-07", required_values: ["kpi:UBER:gross_bookings:total:2026Q2", "kpi:UBER:revenue:2026Q2", "kpi:UBER:adj_ebitda:2026Q2"]}
+  - {id: rpt-lyft-2026q1, companies: [LYFT], as_of: "2026-05-09", required_values: ["kpi:LYFT:gross_bookings:2026Q1", "kpi:LYFT:revenue:2026Q1", "kpi:LYFT:adj_ebitda:2026Q1"]}
+  - {id: rpt-lyft-2026q2, companies: [LYFT], as_of: "2026-08-08", required_values: ["kpi:LYFT:gross_bookings:2026Q2", "kpi:LYFT:revenue:2026Q2", "kpi:LYFT:adj_ebitda:2026Q2"]}
+  - {id: rpt-dash-2026q1, companies: [DASH], as_of: "2026-05-08", required_values: ["kpi:DASH:marketplace_gov:2026Q1", "kpi:DASH:revenue:2026Q1", "kpi:DASH:adj_ebitda:2026Q1"]}
+  - {id: rpt-dash-2026q2, companies: [DASH], as_of: "2026-08-07", required_values: ["kpi:DASH:marketplace_gov:2026Q2", "kpi:DASH:revenue:2026Q2", "kpi:DASH:adj_ebitda:2026Q2"]}
+  - {id: rpt-cart-2026q1, companies: [CART], as_of: "2026-05-08", required_values: ["kpi:CART:gtv:2026Q1", "kpi:CART:revenue:2026Q1", "kpi:CART:adj_ebitda:2026Q1"]}
+  - {id: rpt-cart-2026q2, companies: [CART], as_of: "2026-08-08", required_values: ["kpi:CART:gtv:2026Q2", "kpi:CART:revenue:2026Q2", "kpi:CART:adj_ebitda:2026Q2"]}
+  - {id: rpt-bkng-2026q1, companies: [BKNG], as_of: "2026-04-30", required_values: ["kpi:BKNG:room_nights:2026Q1", "kpi:BKNG:revenue:2026Q1", "kpi:BKNG:adj_ebitda:2026Q1"]}
+  - {id: rpt-bkng-2026q2, companies: [BKNG], as_of: "2026-08-06", required_values: ["kpi:BKNG:room_nights:2026Q2", "kpi:BKNG:revenue:2026Q2", "kpi:BKNG:adj_ebitda:2026Q2"]}
+  - {id: rpt-expe-2026q1, companies: [EXPE], as_of: "2026-05-09", required_values: ["kpi:EXPE:gross_bookings:total:2026Q1", "kpi:EXPE:revenue:total:2026Q1", "kpi:EXPE:adj_ebitda:2026Q1"]}
+  - {id: rpt-expe-2026q2, companies: [EXPE], as_of: "2026-08-07", required_values: ["kpi:EXPE:gross_bookings:total:2026Q2", "kpi:EXPE:revenue:total:2026Q2", "kpi:EXPE:adj_ebitda:2026Q2"]}
+  - {id: rpt-abnb-2026q1, companies: [ABNB], as_of: "2026-05-09", required_values: ["kpi:ABNB:nights_and_experiences:2026Q1", "kpi:ABNB:revenue:2026Q1", "kpi:ABNB:gross_booking_value:2026Q1"]}
+  - {id: rpt-abnb-2026q2, companies: [ABNB], as_of: "2026-08-08", required_values: ["kpi:ABNB:nights_and_experiences:2026Q2", "kpi:ABNB:revenue:2026Q2", "kpi:ABNB:gross_booking_value:2026Q2"]}
+  - {id: rpt-trip-2026q1, companies: [TRIP], as_of: "2026-05-09", required_values: ["kpi:TRIP:revenue:total:2026Q1", "kpi:TRIP:adj_ebitda:total:2026Q1"]}
+  - {id: rpt-trip-2026q2, companies: [TRIP], as_of: "2026-08-08", required_values: ["kpi:TRIP:revenue:total:2026Q2", "kpi:TRIP:adj_ebitda:total:2026Q2"]}

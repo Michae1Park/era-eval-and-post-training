@@ -1,6 +1,16 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "agent_commit": "c040b64",
-  "tasks": 578,
-  "sha256_16": "37c1bcc082360653"
+  "tasks": 1852,
+  "splits": {
+    "test": 601,
+    "dev": 248,
+    "train": 1003
+  },
+  "retrieval": {
+    "with_quotes": 579,
+    "matched": 576
+  },
+  "reviewed": 0,
+  "sha256_16": "bdb024bf98409285"
 }

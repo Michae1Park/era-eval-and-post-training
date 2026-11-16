@@ -1,0 +1,117 @@
+defaults:
+  mode: ask
+  as_of: "2026-09-01"
+  layers: [e2e, trajectory, retrieval, generation]
+  category: filing_text
+  answer: {type: text}
+  expected_tools: [search_filings]
+
+tasks:
+  - id: txt-uber-av-competitors
+    companies: [UBER]
+    question: Which autonomous-vehicle developers does Uber name as current or potential competitors in its 2025 10-K?
+    required_points: [Alphabet (Waymo), Amazon (Zoox), Tesla]
+    evidence_chunks: [UBER-FY2025-1-009-c01]
+
+  - id: txt-uber-av-risk
+    companies: [UBER]
+    question: What risk does Uber's 2025 10-K describe around autonomous vehicle technology?
+    required_points: [May fail to offer AV technology at competitive scale or before competitors, AV technology may fail to perform or be perceived as less safe]
+    evidence_chunks: [UBER-FY2025-1A-001-c01]
+
+  - id: txt-uber-rideshare-competitors
+    companies: [UBER]
+    question: Which ridesharing companies does Uber list as competitors for drivers and riders?
+    required_points: [Bolt, Didi, Lyft, Ola]
+    evidence_chunks: [UBER-FY2025-1-009-c01]
+
+  - id: txt-uber-gross-bookings-definition
+    companies: [UBER]
+    question: How does Uber define gross bookings, and what does the measure exclude?
+    required_points: [Total dollar value including taxes, tolls and fees of Mobility rides, Delivery orders and Freight revenue, Excludes tips earned by drivers]
+    evidence_chunks: [UBER-2026Q1-ER-EX99-018-c00]
+
+  - id: txt-uber-one-members
+    companies: [UBER]
+    question: What milestone did Uber's CEO highlight for Uber One in the Q1 2026 release?
+    required_points: [50 million Uber One members, Members drive half of gross bookings across Mobility and Delivery]
+    evidence_chunks: [UBER-2026Q1-ER-EX99-001-c00]
+
+  - id: txt-lyft-acquisitions
+    companies: [LYFT]
+    question: Which acquisitions took Lyft outside North America in 2025?
+    required_points: [Freenow (Intelligent Apps GmbH) in July 2025, nine new countries and 180+ cities, TBR Global Chauffeuring in October 2025]
+    evidence_chunks: [LYFT-FY2025-1-000-c01, LYFT-FY2025-1A-002-c00]
+
+  - id: txt-dash-marketplaces
+    companies: [DASH]
+    question: What marketplaces and membership programs does DoorDash list in its 2025 10-K?
+    required_points: [DoorDash, Wolt and Deliveroo Marketplaces, DashPass, Wolt+ and Deliveroo Plus, Over 35 million members as of December 31 2025]
+    evidence_chunks: [DASH-FY2025-1-000-c00, DASH-FY2025-1-000-c01]
+
+  - id: txt-dash-q2-commentary
+    companies: [DASH]
+    question: What did DoorDash say about its U.S. grocery and retail categories in Q2 2026?
+    required_points: [Strong year-over-year Marketplace GOV growth, Significantly improved unit economics]
+    evidence_chunks: [DASH-2026Q2-ER-EX99-004-c00]
+
+  - id: txt-abnb-reserve-now-pay-later
+    companies: [ABNB]
+    question: What share of Airbnb's Q1 2026 GBV came from Reserve Now, Pay Later bookings?
+    answer: {type: number, values: [{value: 20, unit: percent}]}
+    required_points: [Roughly 20% of global GBV]
+    evidence_chunks: [ABNB-2026Q1-ER-EX99-001-c03]
+
+  - id: txt-abnb-hotels-repeat
+    companies: [ABNB]
+    question: What evidence does Airbnb give that hotels bring guests back to homes?
+    required_points: [About 55% of guests who book a hotel on Airbnb come back to book a home]
+    evidence_chunks: [ABNB-2026Q1-ER-EX99-002-c00]
+
+  - id: txt-abnb-regulation
+    companies: [ABNB]
+    question: What example of restrictive short-term rental regulation does Airbnb cite in its 2025 10-K?
+    required_points: [New York City regulations passed in 2023 resulted in a de facto ban]
+    evidence_chunks: [ABNB-FY2025-1-008-c00]
+
+  - id: txt-bkng-dma
+    companies: [BKNG]
+    question: How does the EU Digital Markets Act affect Booking Holdings according to its 2025 10-K?
+    required_points: [The European Commission designated Booking a gatekeeper under the DMA, Compliance increases cost and complexity]
+    evidence_chunks: [BKNG-FY2025-1-007-c00]
+
+  - id: txt-expe-google-risk
+    companies: [EXPE]
+    question: How does Expedia describe the competitive risk from Google?
+    required_points: [Google uses its search position to promote its own travel services, This could disintermediate Expedia's platform, Generative and agentic AI may intensify competition]
+    evidence_chunks: [EXPE-FY2025-1A-001-c00]
+
+  - id: txt-expe-q1-highlights
+    companies: [EXPE]
+    question: What were the headline growth rates in Expedia's Q1 2026 release?
+    answer: {type: number_set, values: [{value: 13, unit: percent, label: gross bookings}, {value: 15, unit: percent, label: revenue}, {value: 22, unit: percent, label: B2B gross bookings}, {value: 6, unit: percent, label: room nights}]}
+    evidence_chunks: [EXPE-2026Q1-ER-EX99-001-c00]
+
+  - id: txt-trip-brands
+    companies: [TRIP]
+    question: What are Tripadvisor's three primary consumer-facing brands?
+    required_points: [Viator, Tripadvisor, TheFork]
+    evidence_chunks: [TRIP-FY2025-1-000-c00]
+
+  - id: txt-trip-supply
+    companies: [TRIP]
+    question: How many bookable experiences and restaurant partners does Tripadvisor report?
+    answer: {type: number_set, values: [{value: 425000, unit: count, label: bookable experiences}, {value: 70000, unit: count, label: operators}, {value: 50000, unit: count, label: restaurants}]}
+    evidence_chunks: [TRIP-FY2025-1-000-c02]
+
+  - id: txt-cart-competitors
+    companies: [CART]
+    question: Which online competitors does Instacart name for Instacart Marketplace?
+    required_points: [Amazon, Thrive Market]
+    evidence_chunks: [CART-FY2025-1A-008-c00]
+
+  - id: txt-cart-ai-integration
+    companies: [CART]
+    question: What AI assistant integration did Instacart launch in Q1 2026?
+    required_points: [An integration with Anthropic's Claude that lets users build grocery carts inside the assistant]
+    evidence_chunks: [CART-2026Q1-ER-EX99-004-c01]

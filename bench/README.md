@@ -1,60 +1,62 @@
 # ERA-Bench
 
-One consolidated benchmark for the equity-research-agent. The agent repo keeps its own gold sets; this directory imports them into one schema, records where every task came from, and is where new tasks are added.
+One consolidated benchmark for the equity-research-agent's V4 scope: eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), every task read as of a date. The FY2025 Big Tech sets stay in the agent repo as legacy and are not imported.
 
 ```bash
-python bench/build.py ../equity-research-agent
+python bench/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, COVERAGE.md
+python bench/render.py                           # review/era-bench-review.pdf
 ```
 
-This regenerates `tasks/*.jsonl`, `manifest.json` (version, agent commit, content hash) and [`COVERAGE.md`](COVERAGE.md).
+See [`COVERAGE.md`](COVERAGE.md) for current counts.
 
-## Suites
+## Where tasks come from
 
-| Suite | Corpus | Modes | Notes |
+| Source | Code | Gold from | Tasks |
 |---|---|---|---|
-| `fy2025` | FY2025 10-Ks of AAPL, AMZN, MSFT, NVDA | `ask_fy2025` | The V1–V3 RAG-agent set. Mostly human-verified; has gold retrieval chunks |
-| `marketplaces` | UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP, read as of a date | `ask`, `research`, `investigate`, `extraction` | The V4 agent. Drafted by the agent and checked by script, not yet human-reviewed |
+| Agent gold sets (Ask, Research, Investigate, Extraction) | `imported.py` | Agent repo `evaluation/gold/` | ~500 |
+| Templated from SEC XBRL | `generate.py` | `facts` table (SEC companyfacts / inline XBRL), never agent output | lookups, y/y growth, margins, derived Q4, peer comparisons, trends |
+| Templated from extraction labels | `generate.py` | 337 cross-checked KPI labels with release quotes | KPI lookups, guidance ranges, guide vs actual, EBITDA margins, injection variants |
+| Templated from filing dates | `generate.py` | EDGAR release dates | As-of traps (asked two days before the release) |
+| Hand-drafted | `drafted/*.yaml` → `drafted.py` | Filing passages (chunk ids) and `kpi:`/`guide:`/`xbrl:` refs resolved at build | Investigate, adversarial, multi-turn, filing text, Report |
+
+Drafted values are written as references (`kpi:UBER:gross_bookings:mobility:2026Q2`) or formulas (`growth`, `ratio`, `per_unit`) and resolved from source data at build time. A reference that doesn't resolve, or a chunk id that doesn't exist, fails the build.
+
+## Splits
+
+| Split | Rule |
+|---|---|
+| `dev` | Fix the agent against it |
+| `test` | Report only; don't look while fixing |
+| `train` | Post-training only. Periods before 2025Q3 (disjoint from dev/test, which are 2025Q3 onwards), and no TRIP or CART tasks, so those two are held-out companies (tagged `holdout_company` in dev/test) |
+
+Generated eval tasks are capped at 24 per (category, kind), spread round-robin across companies. `prompt_only` train tasks have no gold answer; they are prompts for distillation (SFT) and preference data (DPO). XBRL train tasks have gold values, usable as verifiable rewards (GRPO).
 
 ## Task schema
 
 | Field | Meaning |
 |---|---|
-| `id` | Unique, prefixed by mode (`fy25-`, `ask-`, `research-`, `investigate-`, `extract-`) |
-| `suite`, `mode` | Which corpus, and which agent entry point runs the task |
-| `layers` | Which eval layers the task supports: `retrieval`, `generation`, `trajectory`, `e2e`, `extraction` |
-| `category`, `kind` | Task type, from the source gold set |
-| `split` | `dev` (fix the agent against it) or `test` (report only) |
-| `as_of` | Date the agent reads data as of; `null` for `fy2025` |
-| `companies` | Tickers involved |
-| `question` | Prompt; `null` for extraction labels |
-| `answer` | `type` (`number`, `number_set`, `text`, `abstain`, `model_ref`, `composite`), `values`, `tolerance`, `should_abstain` |
-| `required_points` | Points a correct text answer must contain (judge-scored) |
-| `expected_gaps` | Caveats a good answer should flag |
-| `expected_refs` | Model cell ids a Research answer must cite (regex) |
-| `expected_tools` | Tools a correct trajectory should use |
-| `evidence` | `gold` and `acceptable` source passages (retrieval and groundedness gold) |
-| `parts` | Investigate sub-questions with their own expected answers |
-| `requires_assumptions` | Answer depends on model assumptions, which must be stated |
-| `failure_mode` | For decline tasks: `unsupported`, `false_premise`, `entity_naming` |
+| `id`, `mode`, `category`, `kind`, `tags` | What the task is. Modes: `ask`, `research`, `investigate`, `multi_turn`, `report`, `extraction` |
+| `layers` | Eval layers it supports: `retrieval`, `generation`, `trajectory`, `e2e`, `safety`, `multi_turn`, `report`, `extraction` |
+| `split`, `as_of`, `companies` | Split, as-of date, tickers |
+| `question` / `turns` | Single prompt, or a conversation with per-turn gold (`resolves_to` states what an elliptical follow-up means) |
+| `answer` | `type`, `values`, `tolerance`, `should_abstain` |
+| `required_points`, `expected_gaps` | Judge-scored content and caveats |
+| `expected_refs`, `parts` | Model cell ids (Research) and sub-questions (Investigate) |
+| `trajectory` | `expected_tools`, `ordered` steps with key arguments and periods, `forbidden_tools` |
+| `evidence` | Gold quotes, matched `chunk_ids` / `parent_chunk_ids` (retrieval gold), XBRL `fact_ids` |
+| `injection` | Prompt-injection payload, the tool it is inserted into, and a `canary` string whose presence in the answer is a failure |
+| `report` | Note checks and the figures it must include |
+| `failure_mode` | For declines: `unsupported`, `false_premise`, `entity_naming`, `not_yet_reported` |
 | `review` | `origin`, `verified_by`, `verified_on` |
-| `provenance` | Source repo, commit, file and id |
+| `provenance` | Source file, id or generator, agent commit |
+
+## Review
+
+`render.py` writes a review PDF with every dev/test task and a sample of train. Add reviewed ids to `review/verified.tsv` (`id<TAB>reviewer<TAB>date`) and rebuild; those tasks are marked verified.
 
 ## Rules
 
-- Gold answers come from source documents, never from agent output.
+- Gold comes from source data (XBRL, release quotes, filing passages), never from agent output.
 - `test` is not looked at while fixing the agent.
-- Every result records `manifest.json`'s `version` and `sha256_16`.
-- Imported tasks are changed in the agent repo and re-imported; new tasks are added here.
-
-## Known gaps (to close before freezing v1.0)
-
-| Gap | Why it matters |
-|---|---|
-| 508 of 578 tasks are not human-verified | Gold errors would read as agent errors |
-| No `train` split | Post-training needs task data disjoint from dev/test |
-| Only 12 Investigate tasks | Too few for multi-step agent results to be meaningful |
-| No retrieval gold for `marketplaces` | Retrieval metrics only cover the `fy2025` suite |
-| `expected_tools` is a set, not an ordered trajectory | Limits the tool-use failure checks (T3, T7, T8) |
-| No adversarial or prompt-injection tasks | Safety and robustness are untested |
-| No multi-turn tasks | The agent supports multi-turn conversations; the benchmark doesn't test them |
-| No Report-mode tasks | Note quality is evaluated only inside the agent repo |
+- Every result records the manifest's `version` and `sha256_16`.
+- Imported tasks are changed in the agent repo and re-imported; new tasks go in `generate.py` or `drafted/`.

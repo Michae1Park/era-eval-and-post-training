@@ -1,243 +1,113 @@
 import argparse
 import hashlib
 import json
+import shutil
 import subprocess
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
-BENCH_VERSION = "0.1.0"
+from data import AgentData, period_order
+from drafted import drafted_tasks
+from generate import EVAL_FROM, HOLDOUT_COMPANIES, generate_all
+from imported import imported_tasks
+from retrieval import ChunkIndex, attach_retrieval_gold
+from schema import stable_fraction
+
+BENCH_VERSION = "0.2.0"
 BENCH_DIR = Path(__file__).parent
-GOLD_DIR = Path("evaluation/gold")
-
-FY2025_SOURCE = "agent-gold-fy2025.jsonl"
-RETRIEVAL_SOURCE = "retrieval-gold-fy2025.jsonl"
-GENERATION_SOURCE = "generation-gold-fy2025.jsonl"
-FY2025_COMPANIES = ["AAPL", "AMZN", "MSFT", "NVDA"]
+REVIEW_FILE = BENCH_DIR / "review" / "verified.tsv"
+EVAL_CAP_PER_KIND = 24
 
 
-def read_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+def task_period(t: dict) -> str | None:
+    periods = [v["period"] for v in t["answer"]["values"] if isinstance(v, dict) and v.get("period")]
+    periods += [p for o in t["trajectory"].get("ordered", []) for p in o.get("periods", [])]
+    if not periods:
+        return None
+    return max(periods, key=period_order)
 
 
-def ids_in(path: Path) -> set[str]:
-    return {row["id"] for row in read_jsonl(path)}
+def split_generated(tasks: list[dict]) -> list[dict]:
+    kept, eval_pool = [], defaultdict(list)
+    for t in tasks:
+        period = task_period(t)
+        if "temporal" in t["tags"] or (period and period_order(period) >= EVAL_FROM):
+            eval_pool[(t["category"], t["kind"])].append(t)
+        elif not set(t["companies"]) & HOLDOUT_COMPANIES:
+            t["split"] = "train"
+            kept.append(t)
+    for group in eval_pool.values():
+        by_company = defaultdict(list)
+        for t in sorted(group, key=lambda t: stable_fraction(t["id"])):
+            by_company[tuple(t["companies"])].append(t)
+        chosen = []
+        while len(chosen) < EVAL_CAP_PER_KIND and any(by_company.values()):
+            for queue in by_company.values():
+                if queue and len(chosen) < EVAL_CAP_PER_KIND:
+                    chosen.append(queue.pop(0))
+        for i, t in enumerate(chosen):
+            t["split"] = "dev" if i % 2 == 0 else "test"
+        kept += chosen
+    return kept
 
 
-def answer_block(row: dict) -> dict:
-    expected = row.get("expected_answer")
-    values = expected if isinstance(expected, list) else [expected] if expected else []
-    return {
-        "type": row.get("answer_type"),
-        "values": values,
-        "tolerance": row.get("tolerance"),
-        "should_abstain": row.get("should_abstain", False),
-    }
-
-
-def review_block(row: dict) -> dict:
-    return {
-        "origin": row.get("origin"),
-        "verified_by": row.get("verified_by") or None,
-        "verified_on": row.get("verified_on"),
-    }
-
-
-def provenance(source_file: str, source_id: str, agent_commit: str) -> dict:
-    return {"repo": "equity-research-agent", "commit": agent_commit, "file": source_file, "id": source_id}
-
-
-def companies_of(row: dict) -> list[str]:
-    if row.get("companies"):
-        return sorted(row["companies"])
-    if row.get("company"):
-        return [row["company"]]
-    named = {s["company"] for s in row.get("sources", []) if s.get("company")}
-    named |= {v["company"] for v in answer_block(row)["values"] if isinstance(v, dict) and v.get("company")}
-    return sorted(named)
-
-
-def fy2025_tasks(gold: Path, commit: str) -> list[dict]:
-    retrieval_ids = ids_in(gold / RETRIEVAL_SOURCE)
-    generation_ids = ids_in(gold / GENERATION_SOURCE)
-    tasks = []
-    for row in read_jsonl(gold / FY2025_SOURCE):
-        layers = ["e2e", "trajectory"]
-        if row["id"] in generation_ids:
-            layers.append("generation")
-        if row["id"] in retrieval_ids:
-            layers.append("retrieval")
-        tasks.append({
-            "id": f"fy25-{row['id']}",
-            "suite": "fy2025",
-            "mode": "ask_fy2025",
-            "layers": sorted(layers),
-            "category": row["category"],
-            "kind": row.get("kind"),
-            "split": row["split"],
-            "as_of": None,
-            "companies": companies_of(row) or FY2025_COMPANIES,
-            "question": row["question"],
-            "answer": answer_block(row),
-            "required_points": row.get("required_points", []),
-            "expected_gaps": [],
-            "expected_refs": [],
-            "expected_tools": row.get("expected_tools", []),
-            "evidence": {"gold": row.get("sources", []), "acceptable": row.get("acceptable_sources", [])},
-            "parts": [],
-            "requires_assumptions": False,
-            "failure_mode": row.get("failure_mode"),
-            "review": review_block(row),
-            "provenance": provenance(FY2025_SOURCE, row["id"], commit),
-        })
+def split_drafted(tasks: list[dict]) -> list[dict]:
+    groups = defaultdict(list)
+    for t in tasks:
+        groups[(t["mode"], t["category"])].append(t)
+    for group in groups.values():
+        for i, t in enumerate(sorted(group, key=lambda t: stable_fraction(t["id"]))):
+            t["split"] = "test" if i % 2 == 0 else "dev"
     return tasks
 
 
-def ask_tasks(gold: Path, commit: str) -> list[dict]:
-    source = "ask-gold.jsonl"
-    return [{
-        "id": f"ask-{row['id']}",
-        "suite": "marketplaces",
-        "mode": "ask",
-        "layers": ["e2e", "trajectory"],
-        "category": row["category"],
-        "kind": row.get("kind"),
-        "split": row["split"],
-        "as_of": row.get("as_of"),
-        "companies": companies_of(row),
-        "question": row["question"],
-        "answer": answer_block(row),
-        "required_points": row.get("required_points", []),
-        "expected_gaps": [],
-        "expected_refs": [],
-        "expected_tools": row.get("expected_tools", []),
-        "evidence": {"gold": row.get("sources", []), "acceptable": []},
-        "parts": [],
-        "requires_assumptions": False,
-        "failure_mode": row.get("failure_mode"),
-        "review": review_block(row),
-        "provenance": provenance(source, row["id"], commit),
-    } for row in read_jsonl(gold / source)]
+def tag_holdouts(tasks: list[dict]) -> None:
+    for t in tasks:
+        if t["split"] in ("dev", "test") and set(t["companies"]) & HOLDOUT_COMPANIES:
+            t["tags"] = sorted(set(t["tags"]) | {"holdout_company"})
 
 
-def research_tasks(gold: Path, commit: str) -> list[dict]:
-    source = "research-gold.jsonl"
-    return [{
-        "id": f"research-{row['id']}",
-        "suite": "marketplaces",
-        "mode": "research",
-        "layers": ["e2e", "trajectory"],
-        "category": row["category"],
-        "kind": None,
-        "split": row["split"],
-        "as_of": row.get("as_of"),
-        "companies": companies_of(row),
-        "question": row["question"],
-        "answer": {"type": "model_ref", "values": [], "tolerance": None, "should_abstain": False},
-        "required_points": [],
-        "expected_gaps": [],
-        "expected_refs": row.get("expected_refs", []),
-        "expected_tools": row.get("expected_tools", []),
-        "evidence": {"gold": [], "acceptable": []},
-        "parts": [],
-        "requires_assumptions": row.get("requires_assumptions", False),
-        "failure_mode": None,
-        "review": review_block(row),
-        "provenance": provenance(source, row["id"], commit),
-    } for row in read_jsonl(gold / source)]
+def apply_reviews(tasks: list[dict]) -> int:
+    if not REVIEW_FILE.exists():
+        return 0
+    decisions = {}
+    for line in REVIEW_FILE.read_text().splitlines():
+        if line.strip() and not line.startswith("#"):
+            task_id, reviewer, day = line.split("\t")[:3]
+            decisions[task_id] = (reviewer, day)
+    for t in tasks:
+        if t["id"] in decisions:
+            t["review"]["verified_by"], t["review"]["verified_on"] = decisions[t["id"]]
+    return sum(t["id"] in decisions for t in tasks)
 
 
-def investigate_tasks(gold: Path, commit: str) -> list[dict]:
-    source = "investigate-gold.jsonl"
-    return [{
-        "id": f"investigate-{row['id']}",
-        "suite": "marketplaces",
-        "mode": "investigate",
-        "layers": ["e2e", "trajectory"],
-        "category": row["category"],
-        "kind": None,
-        "split": row["split"],
-        "as_of": row.get("as_of"),
-        "companies": companies_of(row),
-        "question": row["question"],
-        "answer": {"type": "composite", "values": [], "tolerance": row.get("tolerance"), "should_abstain": False},
-        "required_points": row.get("required_points", []),
-        "expected_gaps": row.get("expected_gaps", []),
-        "expected_refs": [],
-        "expected_tools": [],
-        "evidence": {"gold": [], "acceptable": []},
-        "parts": row.get("parts", []),
-        "requires_assumptions": row.get("requires_assumptions", False),
-        "failure_mode": None,
-        "review": review_block(row),
-        "provenance": provenance(source, row["id"], commit),
-    } for row in read_jsonl(gold / source)]
-
-
-def extraction_tasks(gold: Path, commit: str) -> list[dict]:
-    source = "extraction-gold.jsonl"
-    return [{
-        "id": f"extract-{row['id']}",
-        "suite": "marketplaces",
-        "mode": "extraction",
-        "layers": ["extraction"],
-        "category": row["metric"],
-        "kind": row.get("segment"),
-        "split": "test",
-        "as_of": None,
-        "companies": [row["ticker"]],
-        "question": None,
-        "answer": {
-            "type": "number",
-            "values": [{"value": row["value"], "unit": row["unit"], "company": row["ticker"],
-                        "period": row.get("target_period") or row["period"]}],
-            "tolerance": 0.0,
-            "should_abstain": False,
-        },
-        "required_points": [],
-        "expected_gaps": [],
-        "expected_refs": [],
-        "expected_tools": [],
-        "evidence": {"gold": [{"source": row["source"], "block": row.get("block"), "evidence": row.get("quote")}],
-                     "acceptable": []},
-        "parts": [],
-        "requires_assumptions": False,
-        "failure_mode": None,
-        "review": {"origin": "crosscheck", "verified_by": row.get("verified_by"), "verified_on": None},
-        "provenance": provenance(source, row["id"], commit),
-    } for row in read_jsonl(gold / source)]
-
-
-def human_verified(task: dict) -> bool:
-    verifier = task["review"]["verified_by"] or ""
+def human_verified(t: dict) -> bool:
+    verifier = t["review"]["verified_by"] or ""
     return bool(verifier) and not verifier.startswith("claude")
 
 
-def coverage_markdown(tasks: list[dict], commit: str) -> str:
-    by_mode = Counter(t["mode"] for t in tasks)
-    lines = [
-        f"# ERA-Bench v{BENCH_VERSION} coverage",
-        "",
-        f"Generated by `bench/build.py` from equity-research-agent `{commit}`. Do not edit by hand.",
-        "",
-        "| Mode | Tasks | dev | test | Human-verified | Retrieval gold | Abstain |",
-        "|---|---|---|---|---|---|---|",
-    ]
-    for mode in by_mode:
-        subset = [t for t in tasks if t["mode"] == mode]
-        lines.append("| {} | {} | {} | {} | {} | {} | {} |".format(
-            mode,
-            len(subset),
-            sum(t["split"] == "dev" for t in subset),
-            sum(t["split"] == "test" for t in subset),
-            sum(human_verified(t) for t in subset),
-            sum("retrieval" in t["layers"] for t in subset),
-            sum(t["answer"]["should_abstain"] for t in subset),
-        ))
-    lines.append(f"| **total** | **{len(tasks)}** | | | **{sum(human_verified(t) for t in tasks)}** | | |")
-    lines += ["", "## Categories by mode", ""]
-    for mode in by_mode:
-        counts = Counter(t["category"] for t in tasks if t["mode"] == mode)
-        lines.append(f"- **{mode}**: " + ", ".join(f"{c} {n}" for c, n in counts.most_common()))
+def coverage(tasks: list[dict], commit: str) -> str:
+    lines = [f"# ERA-Bench v{BENCH_VERSION} coverage", "",
+             f"Generated by `bench/build.py` from equity-research-agent `{commit}`. Do not edit by hand.", "",
+             "## By mode and split", "", "| Mode | dev | test | train | Human-verified | Retrieval gold | Ordered trajectory | Abstain |",
+             "|---|---|---|---|---|---|---|---|"]
+    for mode in sorted({t["mode"] for t in tasks}):
+        s = [t for t in tasks if t["mode"] == mode]
+        n = lambda split: sum(t["split"] == split for t in s)
+        lines.append(f"| {mode} | {n('dev')} | {n('test')} | {n('train')} | {sum(map(human_verified, s))} | "
+                     f"{sum(bool(t['evidence']['chunk_ids']) for t in s)} | {sum(len(t['trajectory'].get('ordered', [])) > 1 for t in s)} | "
+                     f"{sum(t['answer']['should_abstain'] for t in s)} |")
+    lines.append(f"| **total** | **{sum(t['split'] == 'dev' for t in tasks)}** | **{sum(t['split'] == 'test' for t in tasks)}** | "
+                 f"**{sum(t['split'] == 'train' for t in tasks)}** | **{sum(map(human_verified, tasks))}** | | | |")
+    lines += ["", "## Categories (dev + test)", "", "| Mode | Category | Tasks |", "|---|---|---|"]
+    for (mode, category), count in sorted(Counter((t["mode"], t["category"]) for t in tasks if t["split"] != "train").items()):
+        lines.append(f"| {mode} | {category} | {count} |")
+    lines += ["", "## Eval layers (dev + test)", "", "| Layer | Tasks |", "|---|---|"]
+    for layer, count in sorted(Counter(l for t in tasks if t["split"] != "train" for l in t["layers"]).items()):
+        lines.append(f"| {layer} | {count} |")
+    lines += ["", "## Origin", "", "| Origin | Tasks |", "|---|---|"]
+    for origin, count in sorted(Counter(t["review"]["origin"] for t in tasks).items()):
+        lines.append(f"| {origin} | {count} |")
     return "\n".join(lines) + "\n"
 
 
@@ -250,25 +120,36 @@ def main() -> None:
     parser.add_argument("agent_repo", type=Path)
     args = parser.parse_args()
 
-    gold = args.agent_repo / GOLD_DIR
     commit = subprocess.check_output(["git", "-C", str(args.agent_repo), "rev-parse", "--short", "HEAD"], text=True).strip()
+    data = AgentData(args.agent_repo)
 
-    tasks = (fy2025_tasks(gold, commit) + ask_tasks(gold, commit) + research_tasks(gold, commit)
-             + investigate_tasks(gold, commit) + extraction_tasks(gold, commit))
-    ids = [t["id"] for t in tasks]
-    duplicates = [i for i, n in Counter(ids).items() if n > 1]
+    drafted, errors = drafted_tasks(data)
+    if errors:
+        raise SystemExit("\n".join(errors))
+    tasks = imported_tasks(args.agent_repo, commit) + split_generated(generate_all(data)) + split_drafted(drafted)
+    for t in tasks:
+        t["provenance"].setdefault("commit", commit)
+
+    duplicates = [i for i, n in Counter(t["id"] for t in tasks).items() if n > 1]
     if duplicates:
-        raise SystemExit(f"duplicate task ids: {duplicates[:5]}")
+        raise SystemExit(f"duplicate task ids: {duplicates[:10]}")
+
+    tag_holdouts(tasks)
+    retrieval_stats = attach_retrieval_gold(tasks, ChunkIndex(data))
+    reviewed = apply_reviews(tasks)
 
     out = BENCH_DIR / "tasks"
-    out.mkdir(exist_ok=True)
-    for mode in sorted({t["mode"] for t in tasks}):
-        write_jsonl(out / f"{mode}.jsonl", [t for t in tasks if t["mode"] == mode])
+    shutil.rmtree(out, ignore_errors=True)
+    out.mkdir()
+    for split in ("dev", "test", "train"):
+        write_jsonl(out / f"{split}.jsonl", [t for t in tasks if t["split"] == split])
 
     digest = hashlib.sha256("".join(json.dumps(t, sort_keys=True) for t in tasks).encode()).hexdigest()[:16]
-    manifest = {"version": BENCH_VERSION, "agent_commit": commit, "tasks": len(tasks), "sha256_16": digest}
+    manifest = {"version": BENCH_VERSION, "agent_commit": commit, "tasks": len(tasks),
+                "splits": dict(Counter(t["split"] for t in tasks)), "retrieval": retrieval_stats,
+                "reviewed": reviewed, "sha256_16": digest}
     (BENCH_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    (BENCH_DIR / "COVERAGE.md").write_text(coverage_markdown(tasks, commit))
+    (BENCH_DIR / "COVERAGE.md").write_text(coverage(tasks, commit))
     print(json.dumps(manifest))
 
 
