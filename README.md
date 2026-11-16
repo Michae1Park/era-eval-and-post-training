@@ -260,12 +260,14 @@ A small classifier routes each query by difficulty: simple lookups go to the sma
 ## 12. Running the Eval
 
 ```bash
-python bench/src/build.py ../equity-research-agent                    # ERA-Bench
-../equity-research-agent/.venv/bin/python harness/run.py --label v1-<commit> --split dev --k 4
-../equity-research-agent/.venv/bin/python scoring/score.py results/v1-<commit>/dev
+uv sync                                                    # installs the agent as an editable path dependency
+uv run python bench/src/build.py ../equity-research-agent  # ERA-Bench
+uv run python harness/run.py --label v1-<commit> --split dev --k 4
+uv run python scoring/score.py results/v1-<commit>/dev
+uv run python scoring/compare.py results/v1-<commit>/dev results/v2-<commit>/dev
 ```
 
-`harness/` runs the agent as a package (`harness/config.yaml` pins model, budgets and search) and writes one JSON trace per run: every model turn and tool call with arguments, results, tokens and timing, stamped with the agent commit and bench hash. Injection tasks wrap the agent's tools to plant the payload. `scoring/` applies rule checks (numbers within tolerance, model-cell refs, abstention, canaries, faithfulness of cited numbers, required tools, ordered calls with key arguments, forbidden tools, repeats, tool errors, budget) and reports pass@1 with Wilson CIs and pass^k by mode, category and held-out company. Judge-scored points are flagged for the judge pass.
+`harness/` evaluates any agent behind the `AgentUnderTest` interface (`harness/agents/`; the ERA agent is `agents/era.py`). `harness/config.yaml` pins model, budgets, search, timeouts and retries. Each task runs under a deadline checked at every model and tool call; transient server errors are retried with backoff; failures are classed as `agent_error`, `timeout` (counted against the agent) or `harness_error`, `infra_error` (rerun on resume, never scored); SIGINT/SIGTERM stop cleanly and keep written traces. Every run is logged in `results/runs.jsonl`. The harness writes one JSON trace per run: every model turn and tool call with arguments, results, tokens and timing, stamped with the agent commit and bench hash. Injection tasks wrap the agent's tools to plant the payload. `scoring/` applies rule checks (numbers within tolerance, model-cell refs, abstention, canaries, faithfulness of cited numbers, required tools, ordered calls with key arguments, forbidden tools, repeats, tool errors, budget) and reports pass@1 with 95% CIs (Wilson via statsmodels for k = 1, task-level bootstrap via scipy for k > 1) and pass^k by mode, category and held-out company. `compare.py` pairs two runs task by task: delta with a bootstrap CI, McNemar's exact test, and the lists of fixed and broken tasks. Judge-scored points are flagged for the judge pass.
 
 ## 13. Repo Layout (planned)
 

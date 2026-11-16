@@ -1,22 +1,35 @@
 import argparse
 import json
-import math
 import os
 import sys
 from collections import defaultdict
 from pathlib import Path
 
+import numpy as np
+from scipy.stats import bootstrap
+from statsmodels.stats.proportion import proportion_confint
+
 ROOT = Path(__file__).resolve().parent.parent
 TASKS = ROOT / "bench" / "tasks"
+NOT_SCORED = ("harness_error", "infra_error")
 
 
-def wilson(passed: int, n: int, z: float = 1.96) -> tuple[float, float]:
-    if not n:
-        return (0.0, 0.0)
-    p = passed / n
-    centre = (p + z * z / (2 * n)) / (1 + z * z / n)
-    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / (1 + z * z / n)
-    return (round(centre - half, 3), round(centre + half, 3))
+def ci95(task_means: list[float], k: int) -> tuple[float, float]:
+    n = len(task_means)
+    if k == 1 or n < 2 or len(set(task_means)) == 1:
+        low, high = proportion_confint(round(sum(task_means)), n, method="wilson")
+    else:
+        result = bootstrap((np.array(task_means),), np.mean, n_resamples=5000, method="percentile", random_state=0)
+        low, high = result.confidence_interval
+    return (round(float(low), 3), round(float(high), 3))
+
+
+def latest(path: Path) -> list[dict]:
+    records = {}
+    for line in path.open():
+        record = json.loads(line)
+        records[(record["task_id"], record["sample"])] = record
+    return list(records.values())
 
 
 def aggregate(rows: list[dict], key) -> dict:
@@ -31,7 +44,7 @@ def aggregate(rows: list[dict], key) -> dict:
         pass_k = sum(all(s) for s in tasks.values())
         k = min(len(s) for s in tasks.values())
         out[group] = {"tasks": n, "k": k, "pass@1": round(pass1, 3),
-                      "ci95": wilson(round(pass1 * n), n), f"pass^{k}": round(pass_k / n, 3)}
+                      "ci95": ci95([sum(s) / len(s) for s in tasks.values()], k), f"pass^{k}": round(pass_k / n, 3)}
     return out
 
 
@@ -63,14 +76,16 @@ def main() -> None:
             task = json.loads(line)
             tasks[task["id"]] = task
     rows = []
-    for line in (run / "traces.jsonl").open():
-        record = json.loads(line)
+    for record in latest(run / "traces.jsonl"):
         task = tasks[record["task_id"]]
+        scored = score(task, record)
+        if record["status"] in NOT_SCORED:
+            scored["pass"] = scored["trajectory_pass"] = None
         rows.append({"task_id": task["id"], "sample": record["sample"], "mode": task["mode"],
                      "category": task["category"], "status": record["status"],
                      "stop": record.get("stop"), "seconds": record["seconds"],
                      "tokens": record.get("tokens"), "tags": task.get("tags") or []}
-                    | score(task, record))
+                    | scored)
     with (run / "scores.jsonl").open("w") as f:
         for row in rows:
             f.write(json.dumps(row) + "\n")
@@ -82,14 +97,14 @@ def main() -> None:
         "holdout_companies": aggregate(rows, lambda r: "holdout" if "holdout_company" in r["tags"] else "seen"),
         "outcome_checks": rate(rows, "outcome"),
         "trajectory_checks": rate(rows, "trajectory"),
-        "errors": sum(r["status"] != "ok" for r in rows),
+        "statuses": {s: sum(r["status"] == s for r in rows) for s in sorted({r["status"] for r in rows})},
         "judge_pending": sum(r["judge_needed"] for r in rows),
         "seconds_mean": round(sum(r["seconds"] for r in rows) / max(len(rows), 1), 1),
         "tokens_mean": {k: round(sum((r["tokens"] or {}).get(k, 0) for r in rows) / max(len(rows), 1))
                         for k in ("input", "output")},
     }
     (run / "summary.json").write_text(json.dumps(summary, indent=2))
-    print(json.dumps({k: summary[k] for k in ("overall", "by_mode", "outcome_checks", "trajectory_checks", "errors")}, indent=1))
+    print(json.dumps({k: summary[k] for k in ("overall", "by_mode", "outcome_checks", "trajectory_checks", "statuses")}, indent=1))
 
 
 if __name__ == "__main__":
