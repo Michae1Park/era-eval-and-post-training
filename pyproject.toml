@@ -1,0 +1,18 @@
+[project]
+name = "era-eval"
+version = "0.3.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "era-agent[local]",
+    "pyyaml",
+    "scipy",
+    "statsmodels",
+    "scikit-learn",
+]
+
+[tool.uv]
+package = false
+constraint-dependencies = ["torch==2.14.0", "sentence-transformers==6.1.0", "transformers==5.17.0", "numpy==2.5.3", "openai==3.22.1", "langgraph==1.2.17"]
+
+[tool.uv.sources]
+era-agent = { path = "../equity-research-agent", editable = true }
