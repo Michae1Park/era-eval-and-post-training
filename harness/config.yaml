@@ -1,0 +1,24 @@
+# Pinned copy of the agent's experiments/v4/ask_config.yaml: the same model, budgets and search.
+# Paths under `agent_repo` are relative to that repo.
+
+agent_repo: ../equity-research-agent
+db: data/v4/build/parent_child.db
+companies: companies.yaml
+retrieval: experiments/v1/config.yaml
+device: cpu
+workers: 4
+
+generation:
+  model: openai:Qwen/Qwen3.6-27B-FP8
+  base_url: http://localhost:8001/v1
+  thinking: false
+  max_tokens: 4000
+
+agent:
+  max_calls: 20
+  max_turns: 20
+  max_context: 20000
+  result_chars: 16000
+
+history: append
+trace_result_chars: 6000
