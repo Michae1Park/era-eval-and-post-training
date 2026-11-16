@@ -17,6 +17,7 @@ See [`COVERAGE.md`](COVERAGE.md) for current counts.
 | Templated from SEC XBRL | `src/generate.py` | `facts` table (SEC companyfacts / inline XBRL), never agent output | lookups, y/y growth, margins, derived Q4, peer comparisons, trends |
 | Templated from extraction labels | `src/generate.py` | 337 cross-checked KPI labels with release quotes | KPI lookups, guidance ranges, guide vs actual, EBITDA margins, injection variants |
 | Templated from filing dates | `src/generate.py` | EDGAR release dates | As-of traps (asked two days before the release) |
+| Templated multi-step | `src/multistep.py` | KPI labels, guidance, XBRL revenue (Q4 = FY − 9M), and model cell-id patterns at four eval as-ofs (one per quarter, 2025Q3–2026Q2) | Research (forecast, scenario, valuation, variance, peers), Investigate (guide beat, growth + scenario, margin path, peer growth vs value), multi-turn chains, adversarial (tool lures, units, false premises, conduct refusals, injections into model and search tools) |
 | Hand-drafted | `drafted/*.yaml` → `src/drafted.py` | Filing passages (chunk ids) and `kpi:`/`guide:`/`xbrl:` refs resolved at build | Investigate, adversarial, multi-turn, filing text, Report |
 
 Drafted values are written as references (`kpi:UBER:gross_bookings:mobility:2026Q2`) or formulas (`growth`, `ratio`, `per_unit`) and resolved from source data at build time. A reference that doesn't resolve, or a chunk id that doesn't exist, fails the build.
@@ -29,7 +30,7 @@ Drafted values are written as references (`kpi:UBER:gross_bookings:mobility:2026
 | `test` | Report only; don't look while fixing |
 | `train` | Post-training only. Periods before 2025Q3 (disjoint from dev/test, which are 2025Q3 onwards), and no TRIP or CART tasks, so those two are held-out companies (tagged `holdout_company` in dev/test) |
 
-Generated eval tasks are capped at 24 per (category, kind), spread round-robin across companies. `prompt_only` train tasks have no gold answer; they are prompts for distillation (SFT) and preference data (DPO). XBRL train tasks have gold values, usable as verifiable rewards (GRPO).
+Generated eval tasks are capped at 24 per (category, kind) (40 for multi-step), spread round-robin across companies. Multi-step train tasks use as-ofs in 2024Q1–2025Q1; their model-ref patterns and XBRL values are checkable, so they serve as verifiable prompts. `prompt_only` train tasks have no gold answer; they are prompts for distillation (SFT) and preference data (DPO). XBRL train tasks have gold values, usable as verifiable rewards (GRPO).
 
 ## Task schema
 

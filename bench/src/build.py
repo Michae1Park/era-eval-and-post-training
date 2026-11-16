@@ -10,10 +10,11 @@ from data import AgentData, period_order
 from drafted import drafted_tasks
 from generate import EVAL_FROM, HOLDOUT_COMPANIES, generate_all
 from imported import imported_tasks
+from multistep import multistep_tasks
 from retrieval import ChunkIndex, attach_retrieval_gold
 from schema import stable_fraction
 
-BENCH_VERSION = "0.2.0"
+BENCH_VERSION = "0.3.0"
 BENCH_DIR = Path(__file__).parent.parent
 REVIEW_FILE = BENCH_DIR / "review" / "verified.tsv"
 EVAL_CAP_PER_KIND = 24
@@ -126,7 +127,7 @@ def main() -> None:
     drafted, errors = drafted_tasks(data)
     if errors:
         raise SystemExit("\n".join(errors))
-    tasks = imported_tasks(args.agent_repo, commit) + split_generated(generate_all(data)) + split_drafted(drafted)
+    tasks = imported_tasks(args.agent_repo, commit) + split_generated(generate_all(data)) + split_drafted(drafted) + multistep_tasks(data)
     for t in tasks:
         t["provenance"].setdefault("commit", commit)
 
