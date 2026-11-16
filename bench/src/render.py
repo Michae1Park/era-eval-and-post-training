@@ -1,4 +1,5 @@
 import argparse
+import math
 import html
 import re
 import json
@@ -224,15 +225,35 @@ def render_html(tasks: list[dict], manifest: dict, coverage_md: str) -> str:
     return f"<!doctype html><html><head><meta charset='utf-8'><title>ERA-Bench review</title><style>{CSS}</style></head><body>{''.join(parts)}</body></html>"
 
 
+def review_sample(tasks: list[dict], fraction: float = 0.2, minimum: int = 2) -> list[dict]:
+    groups = defaultdict(list)
+    for t in tasks:
+        origin = t["review"]["origin"] or ""
+        if t["split"] == "train" or t["mode"] == "extraction" or origin.startswith("agent-repo"):
+            continue
+        groups[(origin, t["mode"], t["category"], t["kind"])].append(t)
+    chosen = []
+    for (origin, *_), group in groups.items():
+        group = sorted(group, key=lambda t: stable_fraction(t["id"]))
+        chosen += group if origin.startswith("drafted") else group[:max(minimum, math.ceil(len(group) * fraction))]
+    return chosen
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, default=BENCH_DIR / "review" / "era-bench-review.pdf")
     parser.add_argument("--chrome", default="google-chrome")
+    parser.add_argument("--sample", action="store_true")
     args = parser.parse_args()
 
     tasks = [json.loads(line) for split in ("dev", "test", "train")
              for line in (BENCH_DIR / "tasks" / f"{split}.jsonl").read_text().splitlines() if line.strip()]
     manifest = json.loads((BENCH_DIR / "manifest.json").read_text())
+    if args.sample:
+        tasks = review_sample(tasks)
+        (BENCH_DIR / "review" / "sample.txt").write_text("".join(t["id"] + "\n" for t in tasks))
+        if args.out.name == "era-bench-review.pdf":
+            args.out = args.out.with_name("era-bench-review-sample.pdf")
     document = render_html(tasks, manifest, (BENCH_DIR / "COVERAGE.md").read_text())
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
