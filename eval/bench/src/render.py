@@ -254,7 +254,7 @@ def main() -> None:
         (BENCH_DIR / "review" / "sample.txt").write_text("".join(t["id"] + "\n" for t in tasks))
         if args.out.name == "era-bench-review.pdf":
             args.out = args.out.with_name("era-bench-review-sample.pdf")
-    document = render_html(tasks, manifest, (BENCH_DIR / "COVERAGE.md").read_text())
+    document = render_html(tasks, manifest, (BENCH_DIR.parent.parent / "docs" / "bench-coverage.md").read_text())
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:

@@ -3,22 +3,22 @@
 One consolidated benchmark for the equity-research-agent's V4 scope: eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), every task read as of a date. The FY2025 Big Tech sets stay in the agent repo as legacy and are not imported.
 
 ```bash
-python eval/bench/src/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, COVERAGE.md
-python bench/src/render.py                           # review/era-bench-review.pdf
+python eval/bench/src/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, docs/bench-coverage.md
+python eval/bench/src/render.py                      # review/era-bench-review.pdf
 ```
 
-See [`COVERAGE.md`](COVERAGE.md) for current counts.
+See [`bench-coverage.md`](bench-coverage.md) for current counts.
 
 ## Where tasks come from
 
 | Source | Code | Gold from | Tasks |
 |---|---|---|---|
-| Agent gold sets (Ask, Research, Investigate, Extraction) | `src/imported.py` | Agent repo `evaluation/gold/` | ~500 |
-| Templated from SEC XBRL | `src/generate.py` | `facts` table (SEC companyfacts / inline XBRL), never agent output | lookups, y/y growth, margins, derived Q4, peer comparisons, trends |
-| Templated from extraction labels | `src/generate.py` | 337 cross-checked KPI labels with release quotes | KPI lookups, guidance ranges, guide vs actual, EBITDA margins, injection variants |
-| Templated from filing dates | `src/generate.py` | EDGAR release dates | As-of traps (asked two days before the release) |
-| Templated multi-step | `src/multistep.py` | KPI labels, guidance, XBRL revenue (Q4 = FY − 9M), and model cell-id patterns at four eval as-ofs (one per quarter, 2025Q3–2026Q2) | Research (forecast, scenario, valuation, variance, peers), Investigate (guide beat, growth + scenario, margin path, peer growth vs value), multi-turn chains, adversarial (tool lures, units, false premises, conduct refusals, injections into model and search tools) |
-| Hand-drafted | `drafted/*.yaml` → `src/drafted.py` | Filing passages (chunk ids) and `kpi:`/`guide:`/`xbrl:` refs resolved at build | Investigate, adversarial, multi-turn, filing text, Report |
+| Agent gold sets (Ask, Research, Investigate, Extraction) | `eval/bench/src/imported.py` | Agent repo `evaluation/gold/` | ~500 |
+| Templated from SEC XBRL | `eval/bench/src/generate.py` | `facts` table (SEC companyfacts / inline XBRL), never agent output | lookups, y/y growth, margins, derived Q4, peer comparisons, trends |
+| Templated from extraction labels | `eval/bench/src/generate.py` | 337 cross-checked KPI labels with release quotes | KPI lookups, guidance ranges, guide vs actual, EBITDA margins, injection variants |
+| Templated from filing dates | `eval/bench/src/generate.py` | EDGAR release dates | As-of traps (asked two days before the release) |
+| Templated multi-step | `eval/bench/src/multistep.py` | KPI labels, guidance, XBRL revenue (Q4 = FY − 9M), and model cell-id patterns at four eval as-ofs (one per quarter, 2025Q3–2026Q2) | Research (forecast, scenario, valuation, variance, peers), Investigate (guide beat, growth + scenario, margin path, peer growth vs value), multi-turn chains, adversarial (tool lures, units, false premises, conduct refusals, injections into model and search tools) |
+| Hand-drafted | `eval/bench/drafted/*.yaml` → `eval/bench/src/drafted.py` | Filing passages (chunk ids) and `kpi:`/`guide:`/`xbrl:` refs resolved at build | Investigate, adversarial, multi-turn, filing text, Report |
 
 Drafted values are written as references (`kpi:UBER:gross_bookings:mobility:2026Q2`) or formulas (`growth`, `ratio`, `per_unit`) and resolved from source data at build time. A reference that doesn't resolve, or a chunk id that doesn't exist, fails the build.
 
@@ -53,11 +53,11 @@ Generated eval tasks are capped at 24 per (category, kind) (40 for multi-step), 
 
 ## Review
 
-`src/render.py` writes a review PDF with every dev/test task and a sample of train. Add reviewed ids to `review/verified.tsv` (`id<TAB>reviewer<TAB>date`) and rebuild; those tasks are marked verified.
+`eval/bench/src/render.py` writes a review PDF with every dev/test task and a sample of train. Add reviewed ids to `eval/bench/review/verified.tsv` (`id<TAB>reviewer<TAB>date`) and rebuild; those tasks are marked verified.
 
 ## Rules
 
 - Gold comes from source data (XBRL, release quotes, filing passages), never from agent output.
 - `test` is not looked at while fixing the agent.
 - Every result records the manifest's `version` and `sha256_16`.
-- Imported tasks are changed in the agent repo and re-imported; new tasks go in `src/generate.py` or `drafted/`.
+- Imported tasks are changed in the agent repo and re-imported; new tasks go in `eval/bench/src/generate.py` or `eval/bench/drafted/`.
