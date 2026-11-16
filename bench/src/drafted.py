@@ -5,7 +5,7 @@ import yaml
 from data import AgentData
 from schema import task
 
-DRAFTED_DIR = Path(__file__).parent / "drafted"
+DRAFTED_DIR = Path(__file__).parent.parent / "drafted"
 TOP_LEVEL = {"mode", "layers", "category", "kind", "as_of", "companies", "question", "required_points", "expected_gaps",
              "requires_assumptions", "failure_mode", "injection", "tags"}
 

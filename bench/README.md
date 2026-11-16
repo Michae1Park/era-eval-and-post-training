@@ -3,8 +3,8 @@
 One consolidated benchmark for the equity-research-agent's V4 scope: eight online marketplaces (UBER, LYFT, DASH, CART, BKNG, EXPE, ABNB, TRIP), every task read as of a date. The FY2025 Big Tech sets stay in the agent repo as legacy and are not imported.
 
 ```bash
-python bench/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, COVERAGE.md
-python bench/render.py                           # review/era-bench-review.pdf
+python bench/src/build.py ../equity-research-agent   # tasks/{dev,test,train}.jsonl, manifest.json, COVERAGE.md
+python bench/src/render.py                           # review/era-bench-review.pdf
 ```
 
 See [`COVERAGE.md`](COVERAGE.md) for current counts.
@@ -13,11 +13,11 @@ See [`COVERAGE.md`](COVERAGE.md) for current counts.
 
 | Source | Code | Gold from | Tasks |
 |---|---|---|---|
-| Agent gold sets (Ask, Research, Investigate, Extraction) | `imported.py` | Agent repo `evaluation/gold/` | ~500 |
-| Templated from SEC XBRL | `generate.py` | `facts` table (SEC companyfacts / inline XBRL), never agent output | lookups, y/y growth, margins, derived Q4, peer comparisons, trends |
-| Templated from extraction labels | `generate.py` | 337 cross-checked KPI labels with release quotes | KPI lookups, guidance ranges, guide vs actual, EBITDA margins, injection variants |
-| Templated from filing dates | `generate.py` | EDGAR release dates | As-of traps (asked two days before the release) |
-| Hand-drafted | `drafted/*.yaml` → `drafted.py` | Filing passages (chunk ids) and `kpi:`/`guide:`/`xbrl:` refs resolved at build | Investigate, adversarial, multi-turn, filing text, Report |
+| Agent gold sets (Ask, Research, Investigate, Extraction) | `src/imported.py` | Agent repo `evaluation/gold/` | ~500 |
+| Templated from SEC XBRL | `src/generate.py` | `facts` table (SEC companyfacts / inline XBRL), never agent output | lookups, y/y growth, margins, derived Q4, peer comparisons, trends |
+| Templated from extraction labels | `src/generate.py` | 337 cross-checked KPI labels with release quotes | KPI lookups, guidance ranges, guide vs actual, EBITDA margins, injection variants |
+| Templated from filing dates | `src/generate.py` | EDGAR release dates | As-of traps (asked two days before the release) |
+| Hand-drafted | `drafted/*.yaml` → `src/drafted.py` | Filing passages (chunk ids) and `kpi:`/`guide:`/`xbrl:` refs resolved at build | Investigate, adversarial, multi-turn, filing text, Report |
 
 Drafted values are written as references (`kpi:UBER:gross_bookings:mobility:2026Q2`) or formulas (`growth`, `ratio`, `per_unit`) and resolved from source data at build time. A reference that doesn't resolve, or a chunk id that doesn't exist, fails the build.
 
@@ -52,11 +52,11 @@ Generated eval tasks are capped at 24 per (category, kind), spread round-robin a
 
 ## Review
 
-`render.py` writes a review PDF with every dev/test task and a sample of train. Add reviewed ids to `review/verified.tsv` (`id<TAB>reviewer<TAB>date`) and rebuild; those tasks are marked verified.
+`src/render.py` writes a review PDF with every dev/test task and a sample of train. Add reviewed ids to `review/verified.tsv` (`id<TAB>reviewer<TAB>date`) and rebuild; those tasks are marked verified.
 
 ## Rules
 
 - Gold comes from source data (XBRL, release quotes, filing passages), never from agent output.
 - `test` is not looked at while fixing the agent.
 - Every result records the manifest's `version` and `sha256_16`.
-- Imported tasks are changed in the agent repo and re-imported; new tasks go in `generate.py` or `drafted/`.
+- Imported tasks are changed in the agent repo and re-imported; new tasks go in `src/generate.py` or `drafted/`.

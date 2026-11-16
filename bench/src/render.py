@@ -8,7 +8,7 @@ from pathlib import Path
 
 from schema import stable_fraction
 
-BENCH_DIR = Path(__file__).parent
+BENCH_DIR = Path(__file__).parent.parent
 MODE_ORDER = ["ask", "investigate", "research", "multi_turn", "report", "extraction"]
 MODE_TITLES = {
     "ask": "Ask: factual questions",
