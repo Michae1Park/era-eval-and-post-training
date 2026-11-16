@@ -22,3 +22,13 @@ agent:
 
 history: append
 trace_result_chars: 6000
+
+agent_under_test: era
+retries: 2
+backoff_seconds: 10
+timeout_seconds:
+  ask: 900
+  research: 1200
+  multi_turn: 1800
+  investigate: 2700
+  report: 7200
