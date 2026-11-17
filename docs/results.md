@@ -138,3 +138,25 @@ All numbers are placeholders. Methods are in [`plan.md`](plan.md). Test split un
 | Frontier only | `x.xx` | `$x.xx` | `x.xs` |
 | Small only | `x.xx` | `$x.xx` | `x.xs` |
 | Router | `x.xx` | `$x.xx` | `x.xs` |
+
+## 10. Forecast accuracy (L5)
+
+Real numbers. `defaults` proposer (no LLM), 8 companies, releases 2024Q4 to 2026Q1, next-quarter forecasts. Full table in `results/forecast/defaults/report.md`.
+
+| Metric | Forecasts | Agent MdAPE | Naive MdAPE | Agent beats naive (95% CI) | Wilcoxon p |
+|---|---|---|---|---|---|
+| Revenue | 48 | 2.6% | 2.9% | 23/48 (35–62%) | 0.18 |
+| Main KPI | 42 | 1.3% | 1.2% | 17/42 (27–56%) | 0.86 |
+| Diluted EPS | 47 | 45.9% | 77.9% | 34/43 (65–89%) | <0.001 |
+
+**EPS vs. consensus** (23 of 47 quarters on a matching basis):
+
+| | Result |
+|---|---|
+| Agent closer than consensus | 10/23 (43%, 95% CI 26–63%) |
+| MdAPE agent vs. consensus | 24.3% vs. 22.2% (Wilcoxon p 0.71) |
+| Both missed by >10% | 13 (genuine surprises, e.g. UBER equity revaluations) |
+| Agent missed, Street close | 5 (ABNB 25Q1–Q2, CART 25Q2, BKNG 26Q2, EXPE 25Q3) |
+| Agent close, Street missed | 3 (CART 25Q3, 26Q2; DASH 26Q1) |
+
+**Read:** revenue and KPI forecasts are no better than seasonal naive. EPS beats naive clearly and is statistically indistinguishable from consensus, but n is small. The five agent-only misses are the ones to investigate.

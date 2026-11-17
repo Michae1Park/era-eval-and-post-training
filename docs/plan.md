@@ -52,6 +52,7 @@ Details in [`bench.md`](bench.md); counts in [`bench-coverage.md`](bench-coverag
 | L2 Generation | Faithfulness given gold context |
 | L3 Trajectory | Failure taxonomy (T1–T8), step efficiency |
 | L4 End-to-end | Correctness, groundedness, completeness, safety, pass^k |
+| L5 Forecast accuracy | Next-quarter forecast vs. reported actuals (MdAPE, beats-naive rate); EPS vs. consensus |
 
 | Dimension | Priority | Method |
 |---|---|---|
@@ -60,6 +61,8 @@ Details in [`bench.md`](bench.md); counts in [`bench-coverage.md`](bench-coverag
 | Completeness | High | Judge rubric vs. gold key points |
 | Finance safety | Medium | Rule + judge (no price targets or advice, abstains, resists injection) |
 | Tone | Low | Judge |
+
+**Forecast accuracy (L5).** Walk-forward backtest that reuses the agent's own (`era_agent.evaluation.backtest`): forecast the next quarter the day after each release, score against the first-reported SEC value. The agent's leakage probe (every input filed before the as-of; target quarter not in history) stops the run on failure, and the scorer also refuses any forecast dated after the print. Baseline: seasonal naive. EPS is also compared with pre-print consensus (Alpha Vantage), scored on the same GAAP actual, as a diagnostic: when the agent misses, did the Street miss too?
 
 **Judges.** A 3-judge panel from different model families, anchored to ~150 human-labeled outputs. Checks: agreement with humans and between judges, position bias, verbosity bias, self-preference, and consistency.
 
@@ -119,6 +122,7 @@ A difficulty classifier routes lookups to the small model and synthesis to the f
 - Coverage is limited to US companies and SEC filings.
 - Judge families overlap with the evaluated models.
 - Costs reflect API prices at run time.
+- Free consensus covers EPS only, and its basis (GAAP vs. adjusted, split-adjusted) varies; mismatched quarters are excluded, which halves the sample.
 
 ## Roadmap
 

@@ -8,6 +8,20 @@ uv run python eval/scoring/score.py results/v1-<commit>/dev
 uv run python eval/scoring/compare.py results/v1-<commit>/dev results/v2-<commit>/dev
 ```
 
+Forecast accuracy (L5; needs `ALPHAVANTAGE_API_KEY` in `.env`):
+
+```bash
+uv run python eval/forecast/consensus.py
+taskset -c 16-31 uv run python eval/forecast/backtest.py --label defaults
+uv run python eval/forecast/score.py --label defaults
+```
+
+| Part | Behavior |
+|---|---|
+| Consensus | Alpha Vantage `EARNINGS` per ticker, cached in `eval/forecast/consensus/` (gitignored); free tier is 25 calls a day |
+| Backtest | The agent's walk-forward backtest with diluted EPS added; `--proposer llm` needs the model server |
+| Score | MdAPE vs. seasonal naive with Wilson CI and Wilcoxon; EPS vs. consensus on same-basis quarters, with miss quadrants; writes `results/forecast/<label>/` |
+
 | Part | Behavior |
 |---|---|
 | Agents | Any agent behind `AgentUnderTest` (`eval/harness/agents/`); ERA is `agents/era.py` |
