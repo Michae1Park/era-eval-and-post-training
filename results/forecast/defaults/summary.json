@@ -1,0 +1,60 @@
+{
+  "accuracy": {
+    "revenue": {
+      "forecasts": 48,
+      "model_mdape": 0.026,
+      "naive_mdape": 0.0287,
+      "beats_naive": 23,
+      "paired": 48,
+      "beats_naive_ci95": [
+        0.345,
+        0.617
+      ],
+      "wilcoxon_p": 0.176
+    },
+    "main_kpi": {
+      "forecasts": 42,
+      "model_mdape": 0.0127,
+      "naive_mdape": 0.0119,
+      "beats_naive": 17,
+      "paired": 42,
+      "beats_naive_ci95": [
+        0.27,
+        0.555
+      ],
+      "wilcoxon_p": 0.856
+    },
+    "eps_diluted": {
+      "forecasts": 47,
+      "model_mdape": 0.4591,
+      "naive_mdape": 0.7791,
+      "beats_naive": 34,
+      "paired": 43,
+      "beats_naive_ci95": [
+        0.648,
+        0.886
+      ],
+      "wilcoxon_p": 0.0
+    }
+  },
+  "consensus": {
+    "quarters": 47,
+    "same_basis": 23,
+    "excluded_basis_mismatch": 24,
+    "agent_closer": 10,
+    "agent_closer_rate": 0.435,
+    "agent_closer_ci95": [
+      0.256,
+      0.632
+    ],
+    "agent_mdape": 0.2428,
+    "consensus_mdape": 0.2222,
+    "wilcoxon_p": 0.709,
+    "quadrants": {
+      "both_close": 2,
+      "agent_beat_street": 3,
+      "agent_missed": 5,
+      "both_missed": 13
+    }
+  }
+}

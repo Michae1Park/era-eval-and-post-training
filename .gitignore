@@ -224,3 +224,4 @@ results/**/traces.jsonl
 results/**/reports/
 results/smoke/
 .venv
+eval/forecast/consensus/
