@@ -65,7 +65,7 @@ Details in [`bench.md`](bench.md); counts in [`bench-coverage.md`](bench-coverag
 
 **Forecast accuracy (L5).** Walk-forward backtest that reuses the agent's own (`era_agent.evaluation.backtest`): forecast the next quarter the day after each release, score against the first-reported SEC value. The agent's leakage probe (every input filed before the as-of; target quarter not in history) stops the run on failure, and the scorer also refuses any forecast dated after the print. Baseline: seasonal naive. EPS is also compared with pre-print consensus (Alpha Vantage), scored on the same GAAP actual, as a diagnostic: when the agent misses, did the Street miss too?
 
-**Judges.** A 3-judge panel from different model families, anchored to ~150 human-labeled outputs. Checks: agreement with humans and between judges, position bias, verbosity bias, self-preference, and consistency.
+**Judges.** A 3-judge panel from different model families (Claude, GPT, Gemini; none is the agent's Qwen, which runs only as a self-preference probe), anchored to ~150 human-labeled outputs. Checks: agreement with humans and between judges, position bias, verbosity bias, self-preference, and consistency.
 
 ## Act 2: Diagnose (RQ2–RQ5)
 

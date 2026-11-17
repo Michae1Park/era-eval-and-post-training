@@ -225,3 +225,4 @@ results/**/reports/
 results/smoke/
 .venv
 eval/forecast/consensus/
+results/judge-cache.jsonl
