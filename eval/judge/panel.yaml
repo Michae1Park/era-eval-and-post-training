@@ -1,25 +1,26 @@
 judges:
-  - name: claude
-    provider: anthropic
-    model: claude-sonnet-5-5
-    key_env: ANTHROPIC_API_KEY
-  - name: gpt
+  - name: gpt-oss
     provider: openai
-    model: gpt-5
-    base_url: https://api.openai.com/v1
-    key_env: OPENAI_API_KEY
-  - name: gemini
+    model: openai/gpt-oss-20b
+    base_url: http://localhost:8002/v1
+    preset: gpt-oss-20b
+  - name: gemma
     provider: openai
-    model: gemini-2.5-pro
-    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
-    key_env: GEMINI_API_KEY
+    model: RedHatAI/gemma-4-31B-it-FP8-block
+    base_url: http://localhost:8002/v1
+    preset: gemma-4-31b-fp8
+  - name: phi
+    provider: openai
+    model: microsoft/phi-4
+    base_url: http://localhost:8002/v1
+    preset: phi-4
 
 self_preference_probe:
   name: qwen
   provider: openai
   model: Qwen/Qwen3.6-27B-FP8
   base_url: http://localhost:8001/v1
-  key_env: null
+  preset: qwen3.6-27b-fp8
 
-max_tokens: 2000
+max_tokens: 4000
 evidence_chars: 12000

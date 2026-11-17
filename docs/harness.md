@@ -8,7 +8,30 @@ uv run python eval/scoring/score.py results/v1-<commit>/dev
 uv run python eval/scoring/compare.py results/v1-<commit>/dev results/v2-<commit>/dev
 ```
 
-Judge panel (after `score.py`; needs the judge keys in `.env`):
+Whole baseline, staged (waits for a free GPU, serves one model at a time; `ONLY="agent swaps judges report"` picks stages):
+
+```bash
+setsid nohup eval/pipeline.sh > results/logs/pipeline.out 2>&1 &
+uv run python eval/scoring/retrieval.py --label retrieval-baseline   # L1, CPU
+uv run python eval/report.py                                          # results/report.md
+```
+
+| Stage | Runs |
+|---|---|
+| agent (27B) | `baseline-27b` dev k=4, L2, ablations on `dev-subset.txt` (`abl-topk4`, `abl-topk16`, `abl-norerank`, `abl-calls8`, `abl-temp07`), self-preference probe, L5 `proposer-llm` |
+| swaps | `swap-9b` (k=4), `swap-1.7b`, `swap-gemma31b` on the subset |
+| judges | gpt-oss-20b, Gemma-4-31B, Phi-4 one at a time on :8002 (`eval/serve.sh`), each over every run |
+| report | Panel aggregate, taxonomy, judge agreement, paired comparisons, `results/report.md` |
+
+| Script | Output |
+|---|---|
+| `eval/bench/src/subset.py` | `dev-subset.txt`: stratified by mode and category |
+| `eval/harness/run.py --set a.b=v` | Config overrides; `retrieval_overrides.*` and `generation.temperature` reach the agent |
+| `eval/scoring/retrieval.py` | L1: hit@k, recall@k, MRR, nDCG@8 vs. gold chunks (parent level) |
+| `eval/scoring/generation.py` | L2: answer from gold chunks only, rule-scored |
+| `eval/scoring/taxonomy.py` | T1–T8 codes per failed run (T0 = unclassified) and root layer (retrieval → tool → reasoning) |
+
+Judge panel (after `score.py`; open models on :8002):
 
 ```bash
 uv run python eval/judge/judge.py results/v1-<commit>/dev
@@ -17,7 +40,7 @@ uv run python eval/judge/agreement.py results/v1-<commit>/dev
 
 | Part | Behavior |
 |---|---|
-| Panel | `eval/judge/panel.yaml`: Claude, GPT and Gemini; `--self-preference` adds the agent's own family (Qwen) as a probe, never counted in the panel |
+| Panel | `eval/judge/panel.yaml`: gpt-oss-20b, Gemma-4-31B, Phi-4; `--judges <name>` runs one judge without merging (one served at a time), then a run without it aggregates from the cache; `--self-preference` adds the agent's own family (Qwen) as a probe, never counted in the panel |
 | Rubric | One call per judge per answer (`eval/judge/prompt.md`): each required point and expected gap covered, grounded in the retrieved evidence, finance-safe, tone 1–5 |
 | Verdict | Majority vote per point and dimension; median tone; judge pass is AND-ed with the rule pass in `scores.jsonl` and `summary.json`. Report mode is not judged here |
 | Cache | Verdicts keyed by judge model and prompt hash in `results/judge-cache.jsonl` (gitignored), so reruns only call for new answers |

@@ -65,9 +65,17 @@ def main() -> None:
     ap.add_argument("--k", type=int, default=1)
     ap.add_argument("--config", default=str(HERE / "config.yaml"))
     ap.add_argument("--workers", type=int)
+    ap.add_argument("--set", nargs="*", default=[], help="config overrides, e.g. generation.model=openai:Qwen/Qwen3.5-9B")
     args = ap.parse_args()
 
     config = yaml.safe_load(Path(args.config).read_text())
+    for item in args.set:
+        path, _, value = item.partition("=")
+        *parents, leaf = path.split(".")
+        node = config
+        for key in parents:
+            node = node.setdefault(key, {})
+        node[leaf] = yaml.safe_load(value)
     agent = AGENTS[config["agent_under_test"]]()
     agent.configure(config)
     version = agent.version()

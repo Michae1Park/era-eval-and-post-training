@@ -46,6 +46,7 @@ class EraAgent:
 
         self.retrieval = yaml.safe_load((self.repo / config["retrieval"]).read_text())["retrieval"]
         self.retrieval["device"] = config.get("device", self.retrieval["device"])
+        self.retrieval.update(config.get("retrieval_overrides") or {})
         self.db = self.repo / config["db"]
         self.factory = agent_factory(self.db, self.retrieval, config["generation"], config["agent"])
         self._guarded_models: set[int] = set()
@@ -56,6 +57,8 @@ class EraAgent:
 
     def _agent(self, task: dict, tool_set: str, injected: list, session=None):
         agent = self.factory(task["as_of"], tool_set, session)
+        if hasattr(agent.model, "temperature"):
+            agent.model.temperature = self.config["generation"].get("temperature", 0.0)
         if id(agent.model) not in self._guarded_models:
             agent.model.complete = guarded(agent.model.complete)
             self._guarded_models.add(id(agent.model))

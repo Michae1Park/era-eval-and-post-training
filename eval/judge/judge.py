@@ -38,6 +38,7 @@ class Client:
     model: str
     base_url: str | None = None
     key_env: str | None = None
+    preset: str | None = None
     max_tokens: int = 2000
 
     def __post_init__(self):
@@ -148,6 +149,10 @@ def ask(judge: Client, prompt: str, points: int, cache: Cache) -> dict:
             break
         except (ValueError, json.JSONDecodeError) as e:
             last = e
+        except Exception as e:  # noqa: BLE001
+            if type(e).__name__ in ("APIConnectionError", "APITimeoutError", "InternalServerError"):
+                return {"error": f"unavailable: {type(e).__name__}"}
+            raise
     else:
         verdict = {"error": str(last)}
     cache.put(key, verdict)
@@ -192,6 +197,7 @@ def main() -> None:
     if args.judges:
         specs = [s for s in specs if s["name"] in args.judges.split(",")]
     judges = [Client(**s, max_tokens=config["max_tokens"]) for s in specs]
+    panel = {s["name"] for s in config["judges"]}
     run = Path(args.run).resolve()
     tasks = {json.loads(l)["id"]: json.loads(l) for s in ("dev", "test", "train") for l in (TASKS / f"{s}.jsonl").open()}
     records = latest(run / "traces.jsonl")
@@ -203,11 +209,15 @@ def main() -> None:
         prompt = build_prompt(task, record, config["evidence_chars"])
         n = len(points_of(task))
         verdicts = {j.name: ask(j, prompt, n, cache) for j in judges}
+        voting = {k: v for k, v in verdicts.items() if k in panel}
         return {"task_id": task["id"], "sample": record["sample"], "points": points_of(task),
-                "verdicts": verdicts} | {"panel": aggregate(verdicts, n)}
+                "verdicts": verdicts} | {"panel": aggregate(voting, n)}
 
     with ThreadPoolExecutor(args.workers) as pool:
         rows = list(pool.map(one, work))
+    if args.judges:
+        print(f"{len(rows)} answers judged by {args.judges}; rerun without --judges to aggregate the panel")
+        return
     with (run / "judgments.jsonl").open("w") as f:
         for row in rows:
             f.write(json.dumps(row) + "\n")
@@ -219,9 +229,11 @@ def merge(run: Path, rows: list[dict]) -> None:
     scores = [json.loads(l) for l in (run / "scores.jsonl").open()]
     for s in scores:
         panel = by_key.get((s["task_id"], s["sample"]))
+        s.setdefault("rule_pass", s["pass"])
         s["judge"] = panel
+        s["pass"] = s["rule_pass"]
         if panel and panel["pass"] is not None:
-            s["pass"] = panel["pass"] if s["pass"] is None else s["pass"] and panel["pass"]
+            s["pass"] = panel["pass"] if s["rule_pass"] is None else s["rule_pass"] and panel["pass"]
             s["judge_needed"] = False
     with (run / "scores.jsonl").open("w") as f:
         for s in scores:

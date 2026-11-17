@@ -65,7 +65,7 @@ Details in [`bench.md`](bench.md); counts in [`bench-coverage.md`](bench-coverag
 
 **Forecast accuracy (L5).** Walk-forward backtest that reuses the agent's own (`era_agent.evaluation.backtest`): forecast the next quarter the day after each release, score against the first-reported SEC value. The agent's leakage probe (every input filed before the as-of; target quarter not in history) stops the run on failure, and the scorer also refuses any forecast dated after the print. Baseline: seasonal naive. EPS is also compared with pre-print consensus (Alpha Vantage), scored on the same GAAP actual, as a diagnostic: when the agent misses, did the Street miss too?
 
-**Judges.** A 3-judge panel from different model families (Claude, GPT, Gemini; none is the agent's Qwen, which runs only as a self-preference probe), anchored to ~150 human-labeled outputs. Checks: agreement with humans and between judges, position bias, verbosity bias, self-preference, and consistency.
+**Judges.** A 3-judge panel of open models from different families, served locally (gpt-oss-20b, Gemma-4-31B, Phi-4; none is the agent's Qwen, which runs only as a self-preference probe), anchored to ~150 human-labeled outputs. Checks: agreement with humans and between judges, position bias, verbosity bias, self-preference, and consistency.
 
 ## Act 2: Diagnose (RQ2–RQ5)
 
@@ -84,8 +84,8 @@ The output is a ranked list of small-model failure modes, which becomes Act 3's 
 
 - **Attribution:** each failed task is assigned a root layer: retrieval miss → tool error → reasoning error.
 - **Reliability:** pass@1 and pass^{3,5,8} per model.
-- **Knobs:** top-K, chunk size, temperature, max steps, reranker.
-- **Pareto:** frontier, mid and small (8B) models on quality, pass^5, $, latency and tokens.
+- **Knobs:** top-K (4/8/16), reranker on/off, max tool calls (8/20), temperature (0/0.7), on a stratified 158-task dev subset. Chunk size is out: the corpus has one chunking build.
+- **Pareto:** no API models, so the largest local models stand in for frontier: Qwen3.6-27B (baseline, full dev, k=4), Gemma-4-31B, Qwen3.5-9B (k=4) and Qwen3-1.7B on the subset; quality, pass^k, GPU $, latency and tokens.
 
 ## Act 3: Fix (RQ6)
 
@@ -125,6 +125,8 @@ A difficulty classifier routes lookups to the small model and synthesis to the f
 - Coverage is limited to US companies and SEC filings.
 - Judge families overlap with the evaluated models.
 - Costs reflect API prices at run time.
+- L1 gold covers earnings-release chunks only, so hits on the same figure in a 10-Q count as misses; hit@k is the headline.
+- Gemma-4 is both a judge and a swapped model; its self-preference on its own run is not corrected.
 - Free consensus covers EPS only, and its basis (GAAP vs. adjusted, split-adjusted) varies; mismatched quarters are excluded, which halves the sample.
 
 ## Roadmap
