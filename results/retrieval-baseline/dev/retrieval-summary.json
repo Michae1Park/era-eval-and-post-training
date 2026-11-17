@@ -1,0 +1,170 @@
+{
+  "queries": 163,
+  "settings": {
+    "embedder": "local:Qwen/Qwen3-Embedding-0.6B",
+    "reranker": "local:BAAI/bge-reranker-v2-m3",
+    "candidates": 40,
+    "rrf_k": 60,
+    "slot_search": true,
+    "decompose": {
+      "rewrite": true,
+      "fan_out": true
+    },
+    "k": 8,
+    "device": "cpu"
+  },
+  "overall": {
+    "hit@1": {
+      "mean": 0.252,
+      "ci95": [
+        0.184,
+        0.319
+      ]
+    },
+    "hit@5": {
+      "mean": 0.589,
+      "ci95": [
+        0.509,
+        0.663
+      ]
+    },
+    "hit@8": {
+      "mean": 0.687,
+      "ci95": [
+        0.613,
+        0.755
+      ]
+    },
+    "recall@1": {
+      "mean": 0.192,
+      "ci95": [
+        0.138,
+        0.251
+      ]
+    },
+    "recall@5": {
+      "mean": 0.444,
+      "ci95": [
+        0.376,
+        0.51
+      ]
+    },
+    "recall@8": {
+      "mean": 0.536,
+      "ci95": [
+        0.47,
+        0.599
+      ]
+    },
+    "mrr": {
+      "mean": 0.376,
+      "ci95": [
+        0.317,
+        0.438
+      ]
+    },
+    "ndcg@8": {
+      "mean": 0.386,
+      "ci95": [
+        0.331,
+        0.44
+      ]
+    }
+  },
+  "by_mode": {
+    "ask": {
+      "hit@1": 0.27,
+      "hit@5": 0.548,
+      "hit@8": 0.659,
+      "recall@1": 0.217,
+      "recall@5": 0.464,
+      "recall@8": 0.556,
+      "mrr": 0.372,
+      "ndcg@8": 0.396
+    },
+    "investigate": {
+      "hit@1": 0.189,
+      "hit@5": 0.73,
+      "hit@8": 0.784,
+      "recall@1": 0.109,
+      "recall@5": 0.379,
+      "recall@8": 0.465,
+      "mrr": 0.392,
+      "ndcg@8": 0.351
+    }
+  },
+  "by_category": {
+    "calculation": {
+      "n": 7,
+      "hit@8": 0.857
+    },
+    "capital_allocation": {
+      "n": 1,
+      "hit@8": 1.0
+    },
+    "entity_naming": {
+      "n": 1,
+      "hit@8": 1.0
+    },
+    "failure_case": {
+      "n": 1,
+      "hit@8": 1.0
+    },
+    "false_premise": {
+      "n": 2,
+      "hit@8": 0.0
+    },
+    "filing_text": {
+      "n": 15,
+      "hit@8": 0.733
+    },
+    "guidance": {
+      "n": 31,
+      "hit@8": 0.839
+    },
+    "operating_kpis": {
+      "n": 23,
+      "hit@8": 0.565
+    },
+    "out_of_coverage": {
+      "n": 1,
+      "hit@8": 1.0
+    },
+    "peer_reasons": {
+      "n": 1,
+      "hit@8": 1.0
+    },
+    "prompt_injection": {
+      "n": 20,
+      "hit@8": 0.6
+    },
+    "reported_financials": {
+      "n": 9,
+      "hit@8": 0.556
+    },
+    "reported_vs_model": {
+      "n": 30,
+      "hit@8": 0.833
+    },
+    "risk_vs_model": {
+      "n": 1,
+      "hit@8": 1.0
+    },
+    "sector": {
+      "n": 1,
+      "hit@8": 0.0
+    },
+    "segment_drivers": {
+      "n": 2,
+      "hit@8": 0.0
+    },
+    "unit_handling": {
+      "n": 16,
+      "hit@8": 0.438
+    },
+    "what_changed": {
+      "n": 1,
+      "hit@8": 1.0
+    }
+  }
+}
