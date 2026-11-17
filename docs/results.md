@@ -139,7 +139,7 @@ All numbers are placeholders. Methods are in [`plan.md`](plan.md). Test split un
 | Small only | `x.xx` | `$x.xx` | `x.xs` |
 | Router | `x.xx` | `$x.xx` | `x.xs` |
 
-## 10. Forecast accuracy (L5)
+## 10. Forecast accuracy (L5, RQ9)
 
 Real numbers. `defaults` proposer (no LLM), 8 companies, releases 2024Q4 to 2026Q1, next-quarter forecasts. Full table in `results/forecast/defaults/report.md`.
 

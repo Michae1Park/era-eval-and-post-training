@@ -15,6 +15,7 @@ Results go in [`results.md`](results.md), in the same order as this plan.
 | Act | # | Question |
 |---|---|---|
 | Measure | RQ1 | Can an LLM-judge panel be trusted for financial research output? |
+| Measure | RQ9 | Do the agent's next-quarter forecasts beat a naive baseline, and when they miss, did consensus miss too? |
 | Diagnose | RQ2 | Where does the agent fail (retrieval, tool use, generation), and how does that differ by model size? |
 | Diagnose | RQ3 | How reliable is it across repeated runs (pass^k)? |
 | Diagnose | RQ4 | Which knobs matter most? |
@@ -93,6 +94,7 @@ The output is a ranked list of small-model failure modes, which becomes Act 3's 
 | T1–T4 (format, tool, args) | SFT | Frontier trajectories passing all L3 rule checks |
 | T5–T6 (hallucination, ignoring output) | DPO | Judge-ranked grounded vs. unsupported pairs |
 | Numeric errors, T7–T8 | GRPO | Rule rewards: number matches gold, valid calls, step penalty |
+| Forecast misses (L5 agent-only) | GRPO (stretch) | LLM proposer's assumptions rewarded by realized backtest error; train on quarters before 2025Q3 only |
 
 | Technique | Model | Method |
 |---|---|---|
@@ -111,6 +113,7 @@ Hardware: a single L40S (48 GB).
 | Judge circularity | DPO model scored by a judge outside the training panel |
 | Reliability | pass^k before vs. after |
 | Cost | New point on the Pareto chart |
+| Forecast accuracy | L5 rerun with `--proposer llm`: MdAPE vs. naive and EPS vs. consensus don't regress |
 
 ## Stretch (RQ8)
 
@@ -127,6 +130,8 @@ A difficulty classifier routes lookups to the small model and synthesis to the f
 ## Roadmap
 
 - [ ] P1 Measure: bench, harness (L1–L4), judge validation
+- [x] P1 Measure: L5 forecast accuracy backtest, defaults proposer
+- [ ] P1 Measure: L5 with the LLM proposer
 - [ ] P2 Diagnose: model swaps, taxonomy, pass^k, ablations, Pareto
 - [ ] P3 Fix: SFT → DPO → GRPO
 - [ ] P4 Verify: held-out, reward gaming, regressions, judge circularity
