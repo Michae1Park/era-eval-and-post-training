@@ -147,6 +147,11 @@ Panel: gpt-oss-20b, Gemma-4-31B, Phi-4 (three families, served locally; Qwen onl
 
 Leakage guard: every input filed before the as-of, target quarter not in history, scorer rejects forecasts dated after the print.
 
+**Math + text.** Code builds the model and default drivers from history, seasonality and guidance (math). In `llm` mode the proposer reads filings through `search_filings` and moves drivers (growth, ratio shifts, fade) with cited evidence; code clips each move to bounds and recomputes (text feeding math). M6.1–M6.2 measure the math alone; M6.3 measures what the text layer adds.
+
+- **Risks:** the proposer prompt does not ask for risk factors, so they count only if a search surfaces them. M6.3 should instruct it to check risk disclosures and recent changes, and report that run separately from the current prompt.
+- **Leakage:** the backtest probe covers model inputs; confirm `search_filings` also enforces the as-of cutoff before M6.3.
+
 | Case | Ticker / quarter | Actual | Agent | Consensus | Read |
 |---|---|---|---|---|---|
 | ✅ Both close | ABNB 2025Q3 EPS | 2.21 | 2.03 | 2.32 | 8% vs. 5% APE |
